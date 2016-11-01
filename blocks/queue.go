@@ -14,14 +14,14 @@ func NewQueue() *Queue {
 	return q
 }
 
-func (q *Queue) Enqueue(el int) {
+func (q *Queue) Enqueue(el interface{}) {
 	q.l.PushBack(el)
 }
 
-func (q *Queue) Dequeue() int {
+func (q *Queue) Dequeue() interface{} {
 	el := q.l.Front()
 	q.l.Remove(el)
-	return el.Value.(int)
+	return el.Value
 }
 
 func (q *Queue) Len() int {

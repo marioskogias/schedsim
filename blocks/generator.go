@@ -13,8 +13,9 @@ type Generator struct {
 func (a *Generator) Run() {
 	for {
 		fmt.Printf("Generator: will add in queue TIME = %v\n", engine.GetTime())
-		a.WriteOutQueue(1)
-		a.WriteOutQueue(1)
+		req := Request{InitTime: engine.GetTime(), ServiceTime: 1}
+		a.WriteOutQueue(req)
+		a.WriteOutQueue(req)
 		a.Wait(5)
 	}
 

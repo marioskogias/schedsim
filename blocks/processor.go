@@ -12,9 +12,9 @@ type Processor struct {
 
 func (a *Processor) Run() {
 	for {
-		req := a.ReadInQueue()
-		fmt.Printf("Processor: read from queue val = %v TIME = %v\n", req, engine.GetTime())
-		a.Wait(req)
+		req := a.ReadInQueue().(Request)
+		fmt.Printf("Processor: read from queue val = %v TIME = %v\n", req.ServiceTime, engine.GetTime())
+		a.Wait(req.ServiceTime)
 	}
 
 }

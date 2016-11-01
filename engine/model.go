@@ -121,8 +121,8 @@ func (m *model) run(threshold int) {
 
 //FIXME remove integers with real requests or sth generic
 type QueueInterface interface {
-	Enqueue(el int)
-	Dequeue() int
+	Enqueue(interface{})
+	Dequeue() interface{}
 	Len() int
 }
 
@@ -149,7 +149,7 @@ func (a *Actor) Wait(d int) {
 	<-ch // block
 }
 
-func (a *Actor) ReadInQueue() int {
+func (a *Actor) ReadInQueue() interface{} {
 	if a.inQueue.Len() > 0 {
 		return a.inQueue.Dequeue()
 	}
@@ -159,7 +159,7 @@ func (a *Actor) ReadInQueue() int {
 	return a.ReadInQueue()
 }
 
-func (a *Actor) WriteOutQueue(el int) {
+func (a *Actor) WriteOutQueue(el interface{}) {
 	a.outQueue.Enqueue(el)
 }
 
