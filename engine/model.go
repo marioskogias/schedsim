@@ -46,6 +46,7 @@ type model struct {
 	queueChan       chan (chan int)
 	actorCount      int
 	pq              priorityQueue
+	bookkeeping     Stats
 }
 
 func newModel() *model {
@@ -117,6 +118,7 @@ func (m *model) run(threshold int) {
 		// wait till process adds event or blocks in queue
 		m.waitActor()
 	}
+	m.bookkeeping.PrintStats()
 }
 
 //FIXME remove integers with real requests or sth generic
@@ -177,4 +179,12 @@ func RegisterActor(a ActorInterface) {
 
 func Run(threshold int) {
 	mdl.run(threshold)
+}
+
+type Stats interface {
+	PrintStats()
+}
+
+func InitStats(s Stats) {
+	mdl.bookkeeping = s
 }
