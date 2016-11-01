@@ -1,4 +1,4 @@
-package main
+package engine
 
 import (
 	"container/heap"
@@ -8,12 +8,12 @@ import (
 
 var mdl *model
 
-type Event struct {
+type event struct {
 	time    int
 	toOwner chan int
 }
 
-type priorityQueue []*Event
+type priorityQueue []*event
 
 func (pq priorityQueue) Len() int { return len(pq) }
 
@@ -26,7 +26,7 @@ func (pq priorityQueue) Swap(i, j int) {
 }
 
 func (pq *priorityQueue) Push(x interface{}) {
-	item := x.(*Event)
+	item := x.(*event)
 	*pq = append(*pq, item)
 }
 
@@ -42,7 +42,7 @@ type model struct {
 	blockedInQueues *list.List
 	waiting         *list.List
 	time            int
-	eventChan       chan *Event
+	eventChan       chan *event
 	queueChan       chan (chan int)
 	actorCount      int
 	pq              priorityQueue
@@ -52,18 +52,25 @@ func newModel() *model {
 	m := &model{}
 	m.blockedInQueues = list.New()
 	m.waiting = list.New()
-	m.eventChan = make(chan *Event)
+	m.eventChan = make(chan *event)
 	m.queueChan = make(chan (chan int))
 	m.pq = make(priorityQueue, 0)
 	heap.Init(&m.pq)
 	return m
 }
 
-func (m *model) registerActor(a *actor) {
-	a.toModelEvent = m.eventChan
-	a.toModelQueue = m.queueChan
+type ActorInterface interface {
+	Run()
+	GetGenericActor() *Actor
+}
+
+func (m *model) RegisterActor(a ActorInterface) {
+	genericActor := a.GetGenericActor()
+	genericActor.toModelEvent = m.eventChan
+	genericActor.toModelQueue = m.queueChan
 	m.actorCount += 1
-	go a.run()
+
+	go a.Run()
 }
 
 func (m *model) getTime() int {
@@ -79,7 +86,7 @@ func (m *model) waitActor() {
 	}
 }
 
-func (m *model) run() {
+func (m *model) run(threshold int) {
 	//wait for all actors to start and add an event or block on a queue
 	for i := 0; i < m.actorCount; i++ {
 		m.waitActor()
@@ -87,7 +94,7 @@ func (m *model) run() {
 	fmt.Printf("All actors started\n")
 
 	//all actors started
-	for m.time < 10 {
+	for m.time < threshold {
 
 		//Check blocked in queues
 		if m.blockedInQueues.Len() > 0 {
@@ -103,7 +110,7 @@ func (m *model) run() {
 
 		}
 		// pick event and wake up process
-		event := heap.Pop(&m.pq).(*Event)
+		event := heap.Pop(&m.pq).(*event)
 		m.time = event.time
 		event.toOwner <- 1
 
@@ -112,93 +119,62 @@ func (m *model) run() {
 	}
 }
 
-type queue struct {
-	l *list.List
+//FIXME remove integers with real requests or sth generic
+type QueueInterface interface {
+	Enqueue(el int)
+	Dequeue() int
+	Len() int
 }
 
-func newQueue() *queue {
-	q := &queue{}
-	q.l = list.New()
-	return q
-}
-
-func (q *queue) enqueue(el int) {
-	q.l.PushBack(el)
-}
-
-func (q *queue) dequeue() int {
-	el := q.l.Front()
-	q.l.Remove(el)
-	return el.Value.(int)
-}
-
-func (q *queue) len() int {
-	return q.l.Len()
-}
-
-type actor struct {
-	toModelEvent chan *Event
+type Actor struct {
+	toModelEvent chan *event
 	toModelQueue chan (chan int)
-	inQueue      *queue
-	outQueue     *queue
-	name         string
+	inQueue      QueueInterface
+	outQueue     QueueInterface
 }
 
-func (a *actor) setInQueue(q *queue) {
+func (a *Actor) SetInQueue(q QueueInterface) {
 	a.inQueue = q
 }
 
-func (a *actor) setOutQueue(q *queue) {
+func (a *Actor) SetOutQueue(q QueueInterface) {
 	a.outQueue = q
 }
 
-func (a *actor) wait(d int) {
-	e := &Event{time: d + mdl.getTime()}
+func (a *Actor) Wait(d int) {
+	e := &event{time: d + mdl.getTime()}
 	ch := make(chan int)
 	e.toOwner = ch
 	a.toModelEvent <- e
 	<-ch // block
 }
 
-func (a *actor) readInQueue() int {
-	if a.inQueue.len() > 0 {
-		return a.inQueue.dequeue()
+func (a *Actor) ReadInQueue() int {
+	if a.inQueue.Len() > 0 {
+		return a.inQueue.Dequeue()
 	}
 	ch := make(chan int)
 	a.toModelQueue <- ch
 	<-ch
-	return a.readInQueue()
+	return a.ReadInQueue()
 }
 
-func (a *actor) run() {
-	if a.name == "generator" {
-		for {
-			fmt.Printf("Generator: will add in queue TIME = %v\n", mdl.getTime())
-			a.outQueue.enqueue(1)
-			a.outQueue.enqueue(1)
-			a.wait(5)
-		}
-	} else {
-		for {
-			req := a.readInQueue()
-			fmt.Printf("Processor: read from queue val = %v TIME = %v\n", req, mdl.getTime())
-			a.wait(req)
-		}
-	}
+func (a *Actor) WriteOutQueue(el int) {
+	a.outQueue.Enqueue(el)
 }
 
-func main() {
+func InitSim() {
 	mdl = newModel()
+}
 
-	generator := &actor{name: "generator"}
-	processor := &actor{name: "processor"}
-	q := newQueue()
+func GetTime() int {
+	return mdl.getTime()
+}
 
-	generator.setOutQueue(q)
-	processor.setInQueue(q)
+func RegisterActor(a ActorInterface) {
+	mdl.RegisterActor(a)
+}
 
-	mdl.registerActor(generator)
-	mdl.registerActor(processor)
-	mdl.run()
-
+func Run(threshold int) {
+	mdl.run(threshold)
 }
