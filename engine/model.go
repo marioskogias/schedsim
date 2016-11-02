@@ -163,6 +163,10 @@ func (a *Actor) WriteOutQueue(el interface{}) {
 	a.outQueue.Enqueue(el)
 }
 
+func (a *Actor) WriteInQueue(el interface{}) {
+	a.inQueue.Enqueue(el)
+}
+
 func InitSim() {
 	mdl = newModel()
 }
