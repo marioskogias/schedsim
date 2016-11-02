@@ -1,7 +1,7 @@
 package blocks
 
 import (
-	"fmt"
+	//"fmt"
 
 	"github.com/marioskogias/schedsim2/engine"
 )
@@ -18,7 +18,7 @@ type Processor struct {
 func (a *Processor) Run() {
 	for {
 		req := a.ReadInQueue().(Request)
-		fmt.Printf("Processor: read from queue val = %v TIME = %v\n", req.ServiceTime, engine.GetTime())
+		//fmt.Printf("Processor: read from queue val = %v TIME = %v\n", req.ServiceTime, engine.GetTime())
 		a.Wait(req.ServiceTime)
 		a.reqDrain.TerminateReq(req)
 	}

@@ -7,17 +7,17 @@ import (
 )
 
 type Request struct {
-	InitTime    int
-	ServiceTime int
+	InitTime    float64
+	ServiceTime float64
 }
 
-func (r *Request) GetServiceTime() int {
+func (r *Request) GetServiceTime() float64 {
 	return r.ServiceTime
 }
 
 type requestLog struct {
-	sum   int
-	count int
+	sum   float64
+	count int64
 }
 
 func (r *requestLog) addRequest(req Request) {
@@ -26,7 +26,7 @@ func (r *requestLog) addRequest(req Request) {
 }
 
 func (r *requestLog) avg() float64 {
-	return float64(r.sum) / float64(r.count)
+	return r.sum / float64(r.count)
 }
 
 type BookKeeper struct {

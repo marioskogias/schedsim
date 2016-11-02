@@ -10,7 +10,10 @@ func main() {
 	engine.InitSim()
 
 	//Add a deterministic generator
-	generator := &blocks.Generator{}
+	//generator := blocks.NewDDGenerator(1, 1)
+
+	//Add an MD generator
+	generator := blocks.NewMDGenerator(0.5, 1)
 
 	//Add a run to completion processor
 	processor := &blocks.Processor{}
@@ -32,5 +35,5 @@ func main() {
 	engine.RegisterActor(processor)
 
 	//Run till 100000 time units
-	engine.Run(10000)
+	engine.Run(1000000)
 }

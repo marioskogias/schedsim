@@ -9,7 +9,7 @@ import (
 var mdl *model
 
 type event struct {
-	time    int
+	time    float64
 	toOwner chan int
 }
 
@@ -41,7 +41,7 @@ func (pq *priorityQueue) Pop() interface{} {
 type model struct {
 	blockedInQueues *list.List
 	waiting         *list.List
-	time            int
+	time            float64
 	eventChan       chan *event
 	queueChan       chan (chan int)
 	actorCount      int
@@ -74,7 +74,7 @@ func (m *model) RegisterActor(a ActorInterface) {
 	go a.Run()
 }
 
-func (m *model) getTime() int {
+func (m *model) getTime() float64 {
 	return m.time
 }
 
@@ -87,7 +87,7 @@ func (m *model) waitActor() {
 	}
 }
 
-func (m *model) run(threshold int) {
+func (m *model) run(threshold float64) {
 	//wait for all actors to start and add an event or block on a queue
 	for i := 0; i < m.actorCount; i++ {
 		m.waitActor()
@@ -143,7 +143,7 @@ func (a *Actor) SetOutQueue(q QueueInterface) {
 	a.outQueue = q
 }
 
-func (a *Actor) Wait(d int) {
+func (a *Actor) Wait(d float64) {
 	e := &event{time: d + mdl.getTime()}
 	ch := make(chan int)
 	e.toOwner = ch
@@ -169,7 +169,7 @@ func InitSim() {
 	mdl = newModel()
 }
 
-func GetTime() int {
+func GetTime() float64 {
 	return mdl.getTime()
 }
 
@@ -177,7 +177,7 @@ func RegisterActor(a ActorInterface) {
 	mdl.RegisterActor(a)
 }
 
-func Run(threshold int) {
+func Run(threshold float64) {
 	mdl.run(threshold)
 }
 
