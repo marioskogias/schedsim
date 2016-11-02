@@ -13,7 +13,10 @@ func main() {
 	//generator := blocks.NewDDGenerator(1, 1)
 
 	//Add an MD generator
-	generator := blocks.NewMDGenerator(0.5, 1)
+	//generator := blocks.NewMDGenerator(0.5, 1)
+
+	//Add an MM generator
+	generator := blocks.NewMMGenerator(0.5, 1.5)
 
 	//Add a run to completion processor
 	processor := &blocks.Processor{}

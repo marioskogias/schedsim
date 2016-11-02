@@ -3,7 +3,6 @@ package engine
 import (
 	"container/heap"
 	"container/list"
-	"fmt"
 )
 
 var mdl *model
@@ -92,7 +91,6 @@ func (m *model) run(threshold float64) {
 	for i := 0; i < m.actorCount; i++ {
 		m.waitActor()
 	}
-	fmt.Printf("All actors started\n")
 
 	//all actors started
 	for m.time < threshold {
