@@ -12,8 +12,8 @@ def run_rtc():
 def run_ps():
     quantums = range(10, 200, 20)
     for q in quantums:
-        with open("mm1_ps_{}.dat".format(q), 'w') as f:
-            [call(["schedsim","--lambda={}".format(x), "--system=ps",
+        with open("mm1_ts_{}.dat".format(q), 'w') as f:
+            [call(["schedsim","--lambda={}".format(x), "--system=ts",
                 "--quantum={}".format(q)], stdout=f) for x in lambdas]
 
 def main():

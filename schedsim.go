@@ -17,7 +17,7 @@ func main() {
 	*/
 	var mu = flag.Float64("mu", 0.02, "mu service rate") // default 50usec
 	var lambda = flag.Float64("lambda", 0.005, "lambda poisson interarrival")
-	var system = flag.String("system", "rtc", "ps or rtc")
+	var system = flag.String("system", "rtc", "ts or rtc")
 	var duration = flag.Float64("duration", 100000000, "experiment duration")
 	var quantum = flag.Float64("quantum", 0.5, "processor quantum")
 
@@ -50,9 +50,9 @@ func main() {
 		processor.SetInQueue(q)
 		processor.SetReqDrain(stats)
 		engine.RegisterActor(processor)
-	} else if *system == "ps" {
+	} else if *system == "ts" {
 		//Add a shared processor
-		processor := blocks.NewSharedProcessor(*quantum)
+		processor := blocks.NewTSProcessor(*quantum)
 		processor.SetInQueue(q)
 		processor.SetReqDrain(stats)
 		engine.RegisterActor(processor)

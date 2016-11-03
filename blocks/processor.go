@@ -32,17 +32,17 @@ func (p *RTCProcessor) SetReqDrain(rd RequestDrain) {
 	p.reqDrain = rd
 }
 
-type SharedProcessor struct {
+type TSProcessor struct {
 	engine.Actor
 	reqDrain RequestDrain
 	quantum  float64
 }
 
-func NewSharedProcessor(quantum float64) *SharedProcessor {
-	return &SharedProcessor{quantum: quantum}
+func NewTSProcessor(quantum float64) *TSProcessor {
+	return &TSProcessor{quantum: quantum}
 }
 
-func (p *SharedProcessor) Run() {
+func (p *TSProcessor) Run() {
 	for {
 		req := p.ReadInQueue().(Request)
 		//fmt.Printf("Processor: read from queue val = %v TIME = %v\n", req.ServiceTime, engine.GetTime())
@@ -58,10 +58,10 @@ func (p *SharedProcessor) Run() {
 	}
 }
 
-func (a *SharedProcessor) GetGenericActor() *engine.Actor {
+func (a *TSProcessor) GetGenericActor() *engine.Actor {
 	return &a.Actor
 }
 
-func (a *SharedProcessor) SetReqDrain(rd RequestDrain) {
+func (a *TSProcessor) SetReqDrain(rd RequestDrain) {
 	a.reqDrain = rd
 }
