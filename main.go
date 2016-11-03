@@ -16,19 +16,19 @@ func main() {
 	//generator := blocks.NewMDGenerator(0.5, 1)
 
 	//Add an MM generator
-	generator := blocks.NewMMGenerator(0.5, 1.5)
+	generator := blocks.NewMMGenerator(0.005, 0.02) // 50usec sevice time, lambda 0.005
 
 	//Add a run to completion processor
-	//processor := &blocks.RTCProcessor{}
+	processor := &blocks.RTCProcessor{}
 
 	//Add a shared processor
-	processor := blocks.NewSharedProcessor(0.5)
+	//processor := blocks.NewSharedProcessor(0.5)
 
 	//Add a fifo queue
 	q := blocks.NewQueue()
 
 	//Init the statistics
-	stats := &blocks.BookKeeper{}
+	stats := blocks.NewBookKeeper()
 	engine.InitStats(stats)
 
 	//Create the topology
@@ -41,5 +41,5 @@ func main() {
 	engine.RegisterActor(processor)
 
 	//Run till 100000 time units
-	engine.Run(100000)
+	engine.Run(10000000)
 }

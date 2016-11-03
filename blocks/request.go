@@ -2,8 +2,14 @@ package blocks
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/marioskogias/schedsim2/engine"
+)
+
+const (
+	bUCKET_COUNT = 100000
+	gRANULARITY  = 10
 )
 
 type Request struct {
@@ -15,29 +21,105 @@ func (r *Request) GetServiceTime() float64 {
 	return r.ServiceTime
 }
 
-type requestLog struct {
-	sum   float64
-	count int64
+func (r *Request) getDelay() float64 {
+	return engine.GetTime() - r.InitTime
 }
 
-func (r *requestLog) addRequest(req Request) {
-	r.sum += (engine.GetTime() - req.InitTime)
-	r.count += 1
+type histogram struct {
+	granularity float64
+	buckets     []int
+	count       int64
+	minBucket   int
+	maxBucket   int
+	sum         float64
+	sum_square  float64
 }
 
-func (r *requestLog) avg() float64 {
-	return r.sum / float64(r.count)
+func newHistogram() *histogram {
+	return &histogram{
+		granularity: gRANULARITY,
+		buckets:     make([]int, bUCKET_COUNT),
+		minBucket:   bUCKET_COUNT - 1,
+		maxBucket:   0,
+	}
+}
+
+func (hdr *histogram) addSample(s float64) {
+	index := int(s / hdr.granularity)
+	if index > bUCKET_COUNT {
+		index = bUCKET_COUNT - 1
+	}
+	hdr.buckets[index]++
+	if index > hdr.maxBucket {
+		hdr.maxBucket = index
+	}
+	if index < hdr.minBucket {
+		hdr.minBucket = index
+	}
+	hdr.count++
+	hdr.sum += s
+	hdr.sum_square += s * s
+}
+
+func (hdr *histogram) avg() float64 {
+	return hdr.sum / float64(hdr.count)
+}
+
+func (hdr *histogram) stddev() float64 {
+	square_avg := hdr.sum_square / float64(hdr.count)
+	mean := hdr.avg()
+
+	return math.Sqrt(square_avg - mean*mean)
+}
+
+func (hdr *histogram) getPercentiles() map[float64]float64 {
+	accum := make([]int, bUCKET_COUNT)
+	res := map[float64]float64{}
+	percentiles := []float64{0.5, 0.9, 0.95, 0.99}
+	percentile_i := 0
+
+	accum[hdr.minBucket] = hdr.buckets[hdr.minBucket]
+	for i := hdr.minBucket + 1; i <= hdr.maxBucket; i++ {
+		accum[i] = accum[i-1] + hdr.buckets[i]
+
+		if float64(accum[i]) > percentiles[percentile_i]*float64(hdr.count) {
+			// linear interpolation
+			down := hdr.granularity * float64(i-1)
+
+			res[percentiles[percentile_i]] = down + hdr.granularity/float64(hdr.buckets[i])*(percentiles[percentile_i]*float64(hdr.count)-float64(accum[i-1]))
+			percentile_i++
+			if percentile_i >= len(percentiles) {
+				break
+			}
+		}
+	}
+	return res
+}
+
+func (hdr *histogram) printPercentiles() {
+	percentiles := hdr.getPercentiles()
+	vals := []float64{0.5, 0.9, 0.95, 0.99}
+	for _, v := range vals {
+		fmt.Printf("%vth: %v\t", int(v*100.0), percentiles[v])
+	}
+	fmt.Println()
 }
 
 type BookKeeper struct {
-	log requestLog
+	hdr *histogram
+}
+
+func NewBookKeeper() *BookKeeper {
+	return &BookKeeper{
+		hdr: newHistogram(),
+	}
 }
 
 func (b *BookKeeper) TerminateReq(r Request) {
-	b.log.addRequest(r)
+	b.hdr.addSample(r.getDelay())
 }
 
 func (b *BookKeeper) PrintStats() {
-	fmt.Printf("The stats are:\n")
-	fmt.Printf("AVG: %v\n", b.log.avg())
+	fmt.Printf("Count: %v AVG: %v STDDev: %v \n", b.hdr.count, b.hdr.avg(), b.hdr.stddev())
+	b.hdr.printPercentiles()
 }
