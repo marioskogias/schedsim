@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/marioskogias/schedsim2/engine"
+	"github.com/marioskogias/schedsim/engine"
 )
 
 const (

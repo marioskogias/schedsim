@@ -3,7 +3,7 @@ package blocks
 import (
 	//"fmt"
 
-	"github.com/marioskogias/schedsim2/engine"
+	"github.com/marioskogias/schedsim/engine"
 )
 
 type RequestDrain interface {

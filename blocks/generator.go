@@ -5,7 +5,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/marioskogias/schedsim2/engine"
+	"github.com/marioskogias/schedsim/engine"
 )
 
 // DDGenerator is a fixed waiting time generator that produces fixed service time requests
