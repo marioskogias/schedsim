@@ -3,7 +3,6 @@ package engine
 import (
 	"container/heap"
 	"container/list"
-	"fmt"
 )
 
 var mdl *model
@@ -89,10 +88,8 @@ func (m *model) waitActor() {
 	select {
 	case event := <-m.eventChan: // Actor did Wait: new event
 		heap.Push(&m.pq, event)
-		//FIXME: add timeouts
 	case blocked := <-m.queueChan: // Actor did ReadInqueue: Blocked in queue
 		if blocked.timeOutEvent != nil {
-			fmt.Printf("model: Will add the new event\n")
 			heap.Push(&m.pq, blocked.timeOutEvent)
 		}
 		m.blockedInQueues.PushBack(blocked)

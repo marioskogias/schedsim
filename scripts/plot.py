@@ -31,6 +31,7 @@ def parse_ps():
 def main():
 
     service_time = 50
+
     # plot run to completion
     rtc_data = parse_file("mm1_rtc.dat")
     x, y1, y2 = zip(*rtc_data)
@@ -40,6 +41,15 @@ def main():
     plt.plot(x, y2, label="RTC 99th")
 
     # plot processor sharing
+    rtc_data = parse_file("mm1_ps.dat")
+    x, y1, y2 = zip(*rtc_data)
+    y1 = map(lambda a: a/float(service_time), y1)
+    y2 = map(lambda a: a/float(service_time), y2)
+    #plt.plot(x, y1, label="PS average")
+    plt.plot(x, y2, label="PS 99th")
+
+    '''
+    # plot time sharing
     data = parse_ps()
     #for q, v in data.iteritems():
     #    x, _, y2 = zip(*v)
@@ -58,6 +68,7 @@ def main():
     x, _, y2 = zip(*v)
     y2 = map(lambda a: a/float(service_time), y2)
     plt.plot(x, y2, label="TS 99th q={}*service_time".format(q/float(service_time)))
+    '''
 
     axes = plt.gca()
     axes.set_ylim([0,100])

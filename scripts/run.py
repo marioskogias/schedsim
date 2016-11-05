@@ -10,6 +10,11 @@ def run_rtc():
         [call(["schedsim","--lambda={}".format(x)], stdout=f) for x in lambdas]
 
 def run_ps():
+    with open("mm1_ps.dat", 'w') as f:
+        [call(["schedsim","--lambda={}".format(x), "--system=ps"],
+            stdout=f) for x in lambdas]
+
+def run_ts():
     quantums = range(10, 200, 20)
     for q in quantums:
         with open("mm1_ts_{}.dat".format(q), 'w') as f:

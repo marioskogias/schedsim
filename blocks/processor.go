@@ -1,7 +1,7 @@
 package blocks
 
 import (
-	"fmt"
+	"container/list"
 
 	"github.com/marioskogias/schedsim/engine"
 )
@@ -73,11 +73,43 @@ type PSProcessor struct {
 	engine.Actor
 	reqDrain RequestDrain
 	count    int // how many concurrent requests
-	// sth to keep the requets
+	reqList  *list.List
+	curr     *list.Element
+	prevTime float64
 }
 
 func NewPSProcessor() *PSProcessor {
-	return &PSProcessor{}
+	return &PSProcessor{reqList: list.New()}
+}
+
+func (p *PSProcessor) getMinService() *list.Element {
+	minS := p.reqList.Front().Value.(*Request).ServiceTime
+	minI := p.reqList.Front()
+	for e := p.reqList.Front(); e != nil; e = e.Next() {
+		val := e.Value.(*Request).ServiceTime
+		if val < minS {
+			minS = val
+			minI = e
+		}
+	}
+	return minI
+}
+
+func (p *PSProcessor) updateServiceTimes() {
+	currTime := engine.GetTime()
+	diff := (currTime - p.prevTime) / float64(p.count)
+	//fmt.Printf("Diff = %v\n", diff)
+	p.prevTime = currTime
+	for e := p.reqList.Front(); e != nil; e = e.Next() {
+		req := e.Value.(*Request)
+		//fmt.Printf("update: ServiceTime=%v, diff = %v\n", req.ServiceTime, diff)
+		req.ServiceTime -= diff
+		if e.Value.(*Request).ServiceTime < 0 {
+			if e != p.curr {
+				panic("updateServiceTime is wrong: negative\n")
+			}
+		}
+	}
 }
 
 func (p *PSProcessor) Run() {
@@ -85,14 +117,25 @@ func (p *PSProcessor) Run() {
 	d = -1
 	for {
 		intr, reqIntrf := p.ReadInQueueTimeOut(d)
+		//update times
+		p.updateServiceTimes()
 		if intr {
-			fmt.Printf("Timeout triggered\n")
-			d = -1
+			req := p.curr.Value.(*Request)
+			p.reqDrain.TerminateReq(*req)
+			p.reqList.Remove(p.curr)
+			p.count--
 		} else {
-			fmt.Printf("New request came\n")
+			p.count++
 			req := reqIntrf.(Request)
-			d = req.ServiceTime
-			fmt.Printf("The service time is %v\n", d)
+
+			reqPtr := &req
+			p.reqList.PushBack(reqPtr)
+		}
+		if p.count > 0 {
+			p.curr = p.getMinService()
+			d = p.curr.Value.(*Request).ServiceTime * float64(p.count)
+		} else {
+			d = -1
 		}
 	}
 }
