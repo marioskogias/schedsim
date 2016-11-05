@@ -10,6 +10,7 @@ type RequestDrain interface {
 	TerminateReq(r Request)
 }
 
+// Run to completion processor
 type RTCProcessor struct {
 	engine.Actor
 	reqDrain RequestDrain
@@ -32,6 +33,7 @@ func (p *RTCProcessor) SetReqDrain(rd RequestDrain) {
 	p.reqDrain = rd
 }
 
+// Time sharing processor
 type TSProcessor struct {
 	engine.Actor
 	reqDrain RequestDrain
@@ -63,5 +65,30 @@ func (a *TSProcessor) GetGenericActor() *engine.Actor {
 }
 
 func (a *TSProcessor) SetReqDrain(rd RequestDrain) {
+	a.reqDrain = rd
+}
+
+// Processor sharing processor
+type PSProcessor struct {
+	engine.Actor
+	reqDrain RequestDrain
+	count    int // how many concurrent requests
+	// sth to keep the requets
+}
+
+func NewPSProcessor(quantum float64) *PSProcessor {
+	return &PSProcessor{}
+}
+
+func (p *PSProcessor) Run() {
+	for {
+	}
+}
+
+func (a *PSProcessor) GetGenericActor() *engine.Actor {
+	return &a.Actor
+}
+
+func (a *PSProcessor) SetReqDrain(rd RequestDrain) {
 	a.reqDrain = rd
 }

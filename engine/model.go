@@ -9,6 +9,7 @@ var mdl *model
 
 type event struct {
 	time    float64
+	active  bool
 	toOwner chan int
 }
 
@@ -37,12 +38,17 @@ func (pq *priorityQueue) Pop() interface{} {
 	return event
 }
 
+type blockEvent struct {
+	wakeUpCh     chan int
+	timeOutEvent *event // if nil no timeout
+}
+
 type model struct {
 	blockedInQueues *list.List
 	waiting         *list.List
 	time            float64
 	eventChan       chan *event
-	queueChan       chan (chan int)
+	queueChan       chan blockEvent
 	actorCount      int
 	pq              priorityQueue
 	bookkeeping     Stats
@@ -53,7 +59,7 @@ func newModel() *model {
 	m.blockedInQueues = list.New()
 	m.waiting = list.New()
 	m.eventChan = make(chan *event)
-	m.queueChan = make(chan (chan int))
+	m.queueChan = make(chan blockEvent)
 	m.pq = make(priorityQueue, 0)
 	heap.Init(&m.pq)
 	return m
@@ -79,10 +85,14 @@ func (m *model) getTime() float64 {
 
 func (m *model) waitActor() {
 	select {
-	case event := <-m.eventChan:
+	case event := <-m.eventChan: // Actor did Wait: new event
 		heap.Push(&m.pq, event)
-	case blocked := <-m.queueChan:
-		m.blockedInQueues.PushBack(blocked)
+		//FIXME: add timeouts
+	case blocked := <-m.queueChan: // Actor did ReadInqueue: Blocked in queue
+		if blocked.timeOutEvent != nil {
+			heap.Push(&m.pq, blocked.timeOutEvent)
+		}
+		m.blockedInQueues.PushBack(blocked.wakeUpCh)
 	}
 }
 
@@ -101,17 +111,20 @@ func (m *model) run(threshold float64) {
 			m.blockedInQueues = list.New()
 
 			for e := l.Front(); e != nil; e = e.Next() {
+				// FIXME
 				ch := e.Value.(chan int)
 				ch <- 1 // try to unblock
 				//wait to block again
 				m.waitActor()
 			}
-
 		}
 		// pick event and wake up process
-		event := heap.Pop(&m.pq).(*event)
-		m.time = event.time
-		event.toOwner <- 1
+		e := heap.Pop(&m.pq).(*event)
+		for !e.active {
+			e = heap.Pop(&m.pq).(*event)
+		}
+		m.time = e.time
+		e.toOwner <- 1
 
 		// wait till process adds event or blocks in queue
 		m.waitActor()
@@ -128,7 +141,7 @@ type QueueInterface interface {
 
 type Actor struct {
 	toModelEvent chan *event
-	toModelQueue chan (chan int)
+	toModelQueue chan blockEvent
 	inQueue      QueueInterface
 	outQueue     QueueInterface
 }
@@ -142,11 +155,50 @@ func (a *Actor) SetOutQueue(q QueueInterface) {
 }
 
 func (a *Actor) Wait(d float64) {
-	e := &event{time: d + mdl.getTime()}
+	e := &event{time: d + mdl.getTime(), active: true}
 	ch := make(chan int)
 	e.toOwner = ch
 	a.toModelEvent <- e
 	<-ch // block
+}
+
+// This is not tested. Do we need it?
+func (a *Actor) WaitInterruptible(d float64, intr <-chan int) {
+	e := &event{time: d + mdl.getTime(), active: true}
+	ch := make(chan int)
+	e.toOwner = ch
+	a.toModelEvent <- e
+	select {
+	case <-ch:
+		return
+	case <-intr:
+		// Deactivate the event
+		e.active = false
+	}
+}
+
+func (a *Actor) ReadInQueueTimeOut(d float64) (bool, interface{}) {
+	if a.inQueue.Len() > 0 {
+		return false, a.inQueue.Dequeue()
+	}
+
+	timeoutTime := d + mdl.getTime()
+	e := &event{time: timeoutTime, active: true}
+	ch := make(chan int)
+	bEvent := blockEvent{timeOutEvent: e, wakeUpCh: ch}
+	a.toModelQueue <- bEvent
+	for {
+		<-ch
+		if a.inQueue.Len() > 0 {
+			e.active = false
+			return false, a.inQueue.Dequeue()
+		}
+		if mdl.getTime() == timeoutTime {
+			return true, nil
+		}
+		bEvent := blockEvent{timeOutEvent: nil, wakeUpCh: ch}
+		a.toModelQueue <- bEvent
+	}
 }
 
 func (a *Actor) ReadInQueue() interface{} {
@@ -154,7 +206,8 @@ func (a *Actor) ReadInQueue() interface{} {
 		return a.inQueue.Dequeue()
 	}
 	ch := make(chan int)
-	a.toModelQueue <- ch
+	bEvent := blockEvent{timeOutEvent: nil, wakeUpCh: ch}
+	a.toModelQueue <- bEvent
 	<-ch
 	return a.ReadInQueue()
 }
