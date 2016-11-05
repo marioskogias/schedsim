@@ -1,7 +1,7 @@
 package blocks
 
 import (
-	//"fmt"
+	"fmt"
 
 	"github.com/marioskogias/schedsim/engine"
 )
@@ -76,12 +76,24 @@ type PSProcessor struct {
 	// sth to keep the requets
 }
 
-func NewPSProcessor(quantum float64) *PSProcessor {
+func NewPSProcessor() *PSProcessor {
 	return &PSProcessor{}
 }
 
 func (p *PSProcessor) Run() {
+	var d float64
+	d = -1
 	for {
+		intr, reqIntrf := p.ReadInQueueTimeOut(d)
+		if intr {
+			fmt.Printf("Timeout triggered\n")
+			d = -1
+		} else {
+			fmt.Printf("New request came\n")
+			req := reqIntrf.(Request)
+			d = req.ServiceTime
+			fmt.Printf("The service time is %v\n", d)
+		}
 	}
 }
 

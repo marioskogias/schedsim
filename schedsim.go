@@ -56,6 +56,11 @@ func main() {
 		processor.SetInQueue(q)
 		processor.SetReqDrain(stats)
 		engine.RegisterActor(processor)
+	} else if *system == "ps" {
+		processor := blocks.NewPSProcessor()
+		processor.SetInQueue(q)
+		processor.SetReqDrain(stats)
+		engine.RegisterActor(processor)
 	}
 
 	//Register actors

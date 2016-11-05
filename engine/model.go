@@ -3,6 +3,7 @@ package engine
 import (
 	"container/heap"
 	"container/list"
+	"fmt"
 )
 
 var mdl *model
@@ -41,6 +42,7 @@ func (pq *priorityQueue) Pop() interface{} {
 type blockEvent struct {
 	wakeUpCh     chan int
 	timeOutEvent *event // if nil no timeout
+	active       bool
 }
 
 type model struct {
@@ -48,7 +50,7 @@ type model struct {
 	waiting         *list.List
 	time            float64
 	eventChan       chan *event
-	queueChan       chan blockEvent
+	queueChan       chan *blockEvent
 	actorCount      int
 	pq              priorityQueue
 	bookkeeping     Stats
@@ -59,7 +61,7 @@ func newModel() *model {
 	m.blockedInQueues = list.New()
 	m.waiting = list.New()
 	m.eventChan = make(chan *event)
-	m.queueChan = make(chan blockEvent)
+	m.queueChan = make(chan *blockEvent)
 	m.pq = make(priorityQueue, 0)
 	heap.Init(&m.pq)
 	return m
@@ -90,9 +92,10 @@ func (m *model) waitActor() {
 		//FIXME: add timeouts
 	case blocked := <-m.queueChan: // Actor did ReadInqueue: Blocked in queue
 		if blocked.timeOutEvent != nil {
+			fmt.Printf("model: Will add the new event\n")
 			heap.Push(&m.pq, blocked.timeOutEvent)
 		}
-		m.blockedInQueues.PushBack(blocked.wakeUpCh)
+		m.blockedInQueues.PushBack(blocked)
 	}
 }
 
@@ -111,11 +114,12 @@ func (m *model) run(threshold float64) {
 			m.blockedInQueues = list.New()
 
 			for e := l.Front(); e != nil; e = e.Next() {
-				// FIXME
-				ch := e.Value.(chan int)
-				ch <- 1 // try to unblock
-				//wait to block again
-				m.waitActor()
+				be := e.Value.(*blockEvent)
+				if be.active {
+					be.wakeUpCh <- 1 // try to unblock
+					//wait to block again
+					m.waitActor()
+				}
 			}
 		}
 		// pick event and wake up process
@@ -141,7 +145,7 @@ type QueueInterface interface {
 
 type Actor struct {
 	toModelEvent chan *event
-	toModelQueue chan blockEvent
+	toModelQueue chan *blockEvent
 	inQueue      QueueInterface
 	outQueue     QueueInterface
 }
@@ -182,10 +186,15 @@ func (a *Actor) ReadInQueueTimeOut(d float64) (bool, interface{}) {
 		return false, a.inQueue.Dequeue()
 	}
 
+	// Negative timeout - no timeout
+	if d < 0 {
+		return false, a.ReadInQueue()
+	}
 	timeoutTime := d + mdl.getTime()
 	e := &event{time: timeoutTime, active: true}
 	ch := make(chan int)
-	bEvent := blockEvent{timeOutEvent: e, wakeUpCh: ch}
+	e.toOwner = ch
+	bEvent := &blockEvent{timeOutEvent: e, wakeUpCh: ch, active: true}
 	a.toModelQueue <- bEvent
 	for {
 		<-ch
@@ -194,9 +203,10 @@ func (a *Actor) ReadInQueueTimeOut(d float64) (bool, interface{}) {
 			return false, a.inQueue.Dequeue()
 		}
 		if mdl.getTime() == timeoutTime {
+			bEvent.active = false
 			return true, nil
 		}
-		bEvent := blockEvent{timeOutEvent: nil, wakeUpCh: ch}
+		bEvent.timeOutEvent = nil
 		a.toModelQueue <- bEvent
 	}
 }
@@ -206,7 +216,7 @@ func (a *Actor) ReadInQueue() interface{} {
 		return a.inQueue.Dequeue()
 	}
 	ch := make(chan int)
-	bEvent := blockEvent{timeOutEvent: nil, wakeUpCh: ch}
+	bEvent := &blockEvent{timeOutEvent: nil, wakeUpCh: ch, active: true}
 	a.toModelQueue <- bEvent
 	<-ch
 	return a.ReadInQueue()
