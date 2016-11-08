@@ -20,24 +20,30 @@ func main() {
 	var system = flag.String("system", "rtc", "ts or rtc")
 	var duration = flag.Float64("duration", 100000000, "experiment duration")
 	var quantum = flag.Float64("quantum", 0.5, "processor quantum")
+	var interarrival = flag.String("inter", "m", "m or d")
 
 	flag.Parse()
 
 	engine.InitSim()
 
-	//Add a deterministic generator
-	//generator := blocks.NewDDGenerator(2, 1)
-
-	//Add an MD generator
-	//generator := blocks.NewMDGenerator(0.5, 1)
-
-	//Add an MM generator
-	generator := blocks.NewMMGenerator(*lambda, *mu) // 50usec sevice time, lambda 0.005
-
 	//Add a fifo queue
 	q := blocks.NewQueue()
 
-	generator.SetOutQueue(q)
+	if *interarrival == "d" {
+		//Add an MD generator
+		generator := blocks.NewMDGenerator(*lambda, 1 / *mu)
+		generator.SetOutQueue(q)
+		engine.RegisterActor(generator)
+
+	} else if *interarrival == "m" {
+		//Add an MM generator
+		generator := blocks.NewMMGenerator(*lambda, *mu) // 50usec sevice time, lambda 0.005
+		generator.SetOutQueue(q)
+		engine.RegisterActor(generator)
+	}
+
+	//Add a deterministic generator
+	//generator := blocks.NewDDGenerator(2, 1)
 
 	//Init the statistics
 	stats := blocks.NewBookKeeper()
@@ -64,7 +70,6 @@ func main() {
 	}
 
 	//Register actors
-	engine.RegisterActor(generator)
 
 	fmt.Printf("rho = %v\n", *lambda / *mu)
 	//Run till 100000 time units

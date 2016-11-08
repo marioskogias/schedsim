@@ -17,6 +17,12 @@ def parse_file(fname):
             l = f.readline()
             p = float(l.split("\t")[3].split(" ")[1])
 
+            '''
+            # get 50th percentile
+            l = f.readline()
+            p = float(l.split("\t")[0].split(" ")[1])
+            '''
+
             l = f.readline()
             res.append((rho, avg, p))
     return res
@@ -32,21 +38,42 @@ def main():
 
     service_time = 50
 
-    # plot run to completion
+    # plot mm1 rtc
     rtc_data = parse_file("mm1_rtc.dat")
     x, y1, y2 = zip(*rtc_data)
     y1 = map(lambda a: a/float(service_time), y1)
     y2 = map(lambda a: a/float(service_time), y2)
-    #plt.plot(x, y1, label="RTC average")
-    plt.plot(x, y2, label="RTC 99th")
+    #plt.plot(x, y1, label="MM RTC average")
+    plt.plot(x, y2, label="MM RTC 99th")
+    #plt.plot(x, y2, label="MM RTC 50th")
 
-    # plot processor sharing
+    # plot md1 rtc
+    rtc_data = parse_file("md1_rtc.dat")
+    x, y1, y2 = zip(*rtc_data)
+    y1 = map(lambda a: a/float(service_time), y1)
+    y2 = map(lambda a: a/float(service_time), y2)
+    #plt.plot(x, y1, label="MD RTC average")
+    plt.plot(x, y2, label="MD RTC 99th")
+    #plt.plot(x, y2, label="MD RTC 50th")
+
+    # plot mm1 ps
     rtc_data = parse_file("mm1_ps.dat")
     x, y1, y2 = zip(*rtc_data)
     y1 = map(lambda a: a/float(service_time), y1)
     y2 = map(lambda a: a/float(service_time), y2)
-    #plt.plot(x, y1, label="PS average")
-    plt.plot(x, y2, label="PS 99th")
+    #plt.plot(x, y1, label="MM PS average")
+    plt.plot(x, y2, label="MM PS 99th")
+    #plt.plot(x, y2, label="MM PS 50th")
+
+    # plot md1 ps
+    rtc_data = parse_file("md1_ps.dat")
+    x, y1, y2 = zip(*rtc_data)
+    y1 = map(lambda a: a/float(service_time), y1)
+    y2 = map(lambda a: a/float(service_time), y2)
+    #plt.plot(x, y1, label="MD PS average")
+    plt.plot(x, y2, label="MD PS 99th")
+    #plt.plot(x, y2, label="MD PS 50th")
+
 
     '''
     # plot time sharing
@@ -70,6 +97,8 @@ def main():
     plt.plot(x, y2, label="TS 99th q={}*service_time".format(q/float(service_time)))
     '''
 
+    # plot horizontal line at 1
+    plt.axhline(y=1)
     axes = plt.gca()
     axes.set_ylim([0,100])
     plt.xlabel("rho")
