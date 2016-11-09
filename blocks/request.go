@@ -13,12 +13,17 @@ const (
 )
 
 type Request struct {
-	InitTime    float64
-	ServiceTime float64
+	InitTime       float64
+	ServiceTime    float64
+	serviceTimeImm float64 // This is an immutable version of the service time
 }
 
-func (r *Request) GetServiceTime() float64 {
-	return r.ServiceTime
+func NewRequest(serviceTime float64) Request {
+	return Request{InitTime: engine.GetTime(), ServiceTime: serviceTime, serviceTimeImm: serviceTime}
+}
+
+func (r *Request) GetInitialServiceTime() float64 {
+	return r.serviceTimeImm
 }
 
 func (r *Request) getDelay() float64 {

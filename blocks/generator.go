@@ -31,7 +31,7 @@ func NewDDGenerator(waitTime, serviceTime float64) *DDGenerator {
 func (g *DDGenerator) Run() {
 	for {
 		//fmt.Printf("Generator: will add in queue TIME = %v\n", engine.GetTime())
-		req := Request{InitTime: engine.GetTime(), ServiceTime: g.serviceTime}
+		req := NewRequest(g.serviceTime)
 		g.WriteOutQueue(req)
 		g.Wait(g.waitTime)
 	}
@@ -60,7 +60,7 @@ func (g *MDGenerator) getDelay() float64 {
 func (g *MDGenerator) Run() {
 	for {
 		//fmt.Printf("Generator: will add in queue TIME = %v\n", engine.GetTime())
-		req := Request{InitTime: engine.GetTime(), ServiceTime: g.serviceTime}
+		req := NewRequest(g.serviceTime)
 		g.WriteOutQueue(req)
 		g.Wait(g.getDelay())
 	}
@@ -95,7 +95,7 @@ func (g *MMGenerator) getServiceTime() float64 {
 func (g *MMGenerator) Run() {
 	for {
 		//fmt.Printf("Generator: will add in queue TIME = %v\n", engine.GetTime())
-		req := Request{InitTime: engine.GetTime(), ServiceTime: g.getServiceTime()}
+		req := NewRequest(g.getServiceTime())
 		g.WriteOutQueue(req)
 		g.Wait(g.getDelay())
 	}
@@ -132,7 +132,7 @@ func (g *MLNGenerator) getServiceTime() float64 {
 func (g *MLNGenerator) Run() {
 	for {
 		//fmt.Printf("Generator: will add in queue TIME = %v\n", engine.GetTime())
-		req := Request{InitTime: engine.GetTime(), ServiceTime: g.getServiceTime()}
+		req := NewRequest(g.getServiceTime())
 		g.WriteOutQueue(req)
 		g.Wait(g.getDelay())
 	}
