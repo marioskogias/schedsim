@@ -26,37 +26,26 @@ func main() {
 
 	engine.InitSim()
 
-	//Add a fifo queue
-	q := blocks.NewQueue()
-
-	if *service == "d" {
-		//Add an MD generator
-		generator := blocks.NewMDGenerator(*lambda, 1 / *mu)
-		generator.SetOutQueue(q)
-		engine.RegisterActor(generator)
-
-	} else if *service == "m" {
-		//Add an MM generator
-		generator := blocks.NewMMGenerator(*lambda, *mu) // 50usec sevice time, lambda 0.005
-		generator.SetOutQueue(q)
-		engine.RegisterActor(generator)
-	} else if *service == "lg" {
-		// FIXME: make this parametrizable
-		// for mean ~ 50 mu = 1 sigma = 2.41
-		generator := blocks.NewMLNGenerator(*lambda, 1, 2.41)
-		generator.SetOutQueue(q)
-		engine.RegisterActor(generator)
-	}
-
-	//Add a deterministic generator
-	//generator := blocks.NewDDGenerator(2, 1)
-
 	//Init the statistics
 	stats := blocks.NewBookKeeper()
 	engine.InitStats(stats)
 
+	// Create a generator
+	var generator engine.ActorInterface
+	if *service == "d" {
+		//Add an MD generator
+		generator = blocks.NewMDGenerator(*lambda, 1 / *mu)
+	} else if *service == "m" {
+		//Add an MM generator
+		generator = blocks.NewMMGenerator(*lambda, *mu) // 50usec sevice time, lambda 0.005
+	} else if *service == "lg" {
+		// FIXME: make this parametrizable
+		// for mean ~ 50 mu = 1 sigma = 2.41
+		generator = blocks.NewMLNGenerator(*lambda, 1, 2.41)
+	}
+
+	// Create a processor
 	var processor blocks.Processor
-	// FIXME: handle processor type properly
 	if *processorType == "rtc" {
 		//Add a run to completion processor
 		processor = &blocks.RTCProcessor{}
@@ -66,13 +55,19 @@ func main() {
 	} else if *processorType == "ps" {
 		processor = blocks.NewPSProcessor()
 	}
-	processor.SetInQueue(q)
 	processor.SetReqDrain(stats)
+
+	//Add a fifo queue
+	q := blocks.NewQueue()
+
+	// Create the topology
+	generator.SetOutQueue(q)
+	processor.SetInQueue(q)
+
+	// Register Actors
+	engine.RegisterActor(generator)
 	engine.RegisterActor(processor)
 
-	//Register actors
-
 	fmt.Printf("rho = %v\n", *lambda / *mu)
-	//Run till 100000 time units
 	engine.Run(*duration)
 }

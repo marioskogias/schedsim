@@ -9,9 +9,17 @@ import (
 	"github.com/marioskogias/schedsim/engine"
 )
 
+type genericGenerator struct {
+	engine.Actor
+}
+
+func (g *genericGenerator) GetGenericActor() *engine.Actor {
+	return &g.Actor
+}
+
 // DDGenerator is a fixed waiting time generator that produces fixed service time requests
 type DDGenerator struct {
-	engine.Actor
+	genericGenerator
 	waitTime    float64
 	serviceTime float64
 }
@@ -29,13 +37,9 @@ func (g *DDGenerator) Run() {
 	}
 }
 
-func (g *DDGenerator) GetGenericActor() *engine.Actor {
-	return &g.Actor
-}
-
 // MDGenerator is a exponential waiting time generator that produces fixed service time requests
 type MDGenerator struct {
-	engine.Actor
+	genericGenerator
 	waitLambda  float64
 	serviceTime float64
 }
@@ -62,13 +66,9 @@ func (g *MDGenerator) Run() {
 	}
 }
 
-func (g *MDGenerator) GetGenericActor() *engine.Actor {
-	return &g.Actor
-}
-
 // MDGenerator is a exponential waiting time generator that produces fixed service time requests
 type MMGenerator struct {
-	engine.Actor
+	genericGenerator
 	waitLambda float64
 	serviceMu  float64
 }
@@ -101,13 +101,9 @@ func (g *MMGenerator) Run() {
 	}
 }
 
-func (g *MMGenerator) GetGenericActor() *engine.Actor {
-	return &g.Actor
-}
-
 //MLNGenerator is exponential waiting time lognormal service time generator
 type MLNGenerator struct {
-	engine.Actor
+	genericGenerator
 	waitLambda float64
 	mu         float64
 	sigma      float64
@@ -140,8 +136,4 @@ func (g *MLNGenerator) Run() {
 		g.WriteOutQueue(req)
 		g.Wait(g.getDelay())
 	}
-}
-
-func (g *MLNGenerator) GetGenericActor() *engine.Actor {
-	return &g.Actor
 }
