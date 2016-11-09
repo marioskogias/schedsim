@@ -2,6 +2,7 @@ package blocks
 
 import (
 	//"fmt"
+	"math"
 	"math/rand"
 	"time"
 
@@ -101,5 +102,46 @@ func (g *MMGenerator) Run() {
 }
 
 func (g *MMGenerator) GetGenericActor() *engine.Actor {
+	return &g.Actor
+}
+
+//MLNGenerator is exponential waiting time lognormal service time generator
+type MLNGenerator struct {
+	engine.Actor
+	waitLambda float64
+	mu         float64
+	sigma      float64
+}
+
+func NewMLNGenerator(waitLambda, mu, sigma float64) *MLNGenerator {
+	// Seed with time
+	rand.Seed(time.Now().UTC().UnixNano())
+
+	return &MLNGenerator{waitLambda: waitLambda, mu: mu, sigma: sigma}
+}
+
+func (g *MLNGenerator) getDelay() float64 {
+	d := float64(rand.ExpFloat64() / g.waitLambda)
+	//fmt.Printf("%v\n", d)
+	return d
+}
+
+func (g *MLNGenerator) getServiceTime() float64 {
+	z := rand.NormFloat64()
+	s := math.Exp(g.mu + g.sigma*z)
+	//fmt.Printf("%v\n", s)
+	return s
+}
+
+func (g *MLNGenerator) Run() {
+	for {
+		//fmt.Printf("Generator: will add in queue TIME = %v\n", engine.GetTime())
+		req := Request{InitTime: engine.GetTime(), ServiceTime: g.getServiceTime()}
+		g.WriteOutQueue(req)
+		g.Wait(g.getDelay())
+	}
+}
+
+func (g *MLNGenerator) GetGenericActor() *engine.Actor {
 	return &g.Actor
 }

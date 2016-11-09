@@ -12,15 +12,15 @@ func main() {
 
 	/*
 		var mu, lambda float64
-		var system string
+		var processor string
 		var duration int
 	*/
 	var mu = flag.Float64("mu", 0.02, "mu service rate") // default 50usec
 	var lambda = flag.Float64("lambda", 0.005, "lambda poisson interarrival")
-	var system = flag.String("system", "rtc", "ts or rtc")
+	var processor = flag.String("processor", "rtc", "ts or rtc")
 	var duration = flag.Float64("duration", 100000000, "experiment duration")
 	var quantum = flag.Float64("quantum", 0.5, "processor quantum")
-	var interarrival = flag.String("inter", "m", "m or d")
+	var service = flag.String("service", "m", "m or d or lg")
 
 	flag.Parse()
 
@@ -29,15 +29,21 @@ func main() {
 	//Add a fifo queue
 	q := blocks.NewQueue()
 
-	if *interarrival == "d" {
+	if *service == "d" {
 		//Add an MD generator
 		generator := blocks.NewMDGenerator(*lambda, 1 / *mu)
 		generator.SetOutQueue(q)
 		engine.RegisterActor(generator)
 
-	} else if *interarrival == "m" {
+	} else if *service == "m" {
 		//Add an MM generator
 		generator := blocks.NewMMGenerator(*lambda, *mu) // 50usec sevice time, lambda 0.005
+		generator.SetOutQueue(q)
+		engine.RegisterActor(generator)
+	} else if *service == "lg" {
+		// FIXME: make this parametrizable
+		// for mean ~ 50 mu = 1 sigma = 2.41
+		generator := blocks.NewMLNGenerator(*lambda, 1, 2.41)
 		generator.SetOutQueue(q)
 		engine.RegisterActor(generator)
 	}
@@ -50,19 +56,19 @@ func main() {
 	engine.InitStats(stats)
 
 	// FIXME: handle processor type properly
-	if *system == "rtc" {
+	if *processor == "rtc" {
 		//Add a run to completion processor
 		processor := &blocks.RTCProcessor{}
 		processor.SetInQueue(q)
 		processor.SetReqDrain(stats)
 		engine.RegisterActor(processor)
-	} else if *system == "ts" {
+	} else if *processor == "ts" {
 		//Add a shared processor
 		processor := blocks.NewTSProcessor(*quantum)
 		processor.SetInQueue(q)
 		processor.SetReqDrain(stats)
 		engine.RegisterActor(processor)
-	} else if *system == "ps" {
+	} else if *processor == "ps" {
 		processor := blocks.NewPSProcessor()
 		processor.SetInQueue(q)
 		processor.SetReqDrain(stats)

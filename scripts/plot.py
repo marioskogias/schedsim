@@ -13,6 +13,7 @@ def parse_file(fname):
             l = f.readline()
             avg = float(l.split(" ")[3])
 
+            '''
             # get 99th percentile
             l = f.readline()
             p = float(l.split("\t")[3].split(" ")[1])
@@ -21,7 +22,7 @@ def parse_file(fname):
             # get 50th percentile
             l = f.readline()
             p = float(l.split("\t")[0].split(" ")[1])
-            '''
+
 
             l = f.readline()
             res.append((rho, avg, p))
@@ -44,7 +45,7 @@ def main():
     y1 = map(lambda a: a/float(service_time), y1)
     y2 = map(lambda a: a/float(service_time), y2)
     #plt.plot(x, y1, label="MM RTC average")
-    plt.plot(x, y2, label="MM RTC 99th")
+    #plt.plot(x, y2, label="MM RTC 99th")
     #plt.plot(x, y2, label="MM RTC 50th")
 
     # plot md1 rtc
@@ -53,8 +54,17 @@ def main():
     y1 = map(lambda a: a/float(service_time), y1)
     y2 = map(lambda a: a/float(service_time), y2)
     #plt.plot(x, y1, label="MD RTC average")
-    plt.plot(x, y2, label="MD RTC 99th")
+    #plt.plot(x, y2, label="MD RTC 99th")
     #plt.plot(x, y2, label="MD RTC 50th")
+
+    # plot mdlg1 rtc
+    rtc_data = parse_file("mlg1_rtc.dat")
+    x, y1, y2 = zip(*rtc_data)
+    y1 = map(lambda a: a/float(service_time), y1)
+    y2 = map(lambda a: a/float(service_time), y2)
+    #plt.plot(x, y1, label="MLG RTC average")
+    #plt.plot(x, y2, label="MLG RTC 99th")
+    plt.plot(x, y2, label="MLG RTC 50th")
 
     # plot mm1 ps
     rtc_data = parse_file("mm1_ps.dat")
@@ -62,7 +72,7 @@ def main():
     y1 = map(lambda a: a/float(service_time), y1)
     y2 = map(lambda a: a/float(service_time), y2)
     #plt.plot(x, y1, label="MM PS average")
-    plt.plot(x, y2, label="MM PS 99th")
+    #plt.plot(x, y2, label="MM PS 99th")
     #plt.plot(x, y2, label="MM PS 50th")
 
     # plot md1 ps
@@ -71,8 +81,17 @@ def main():
     y1 = map(lambda a: a/float(service_time), y1)
     y2 = map(lambda a: a/float(service_time), y2)
     #plt.plot(x, y1, label="MD PS average")
-    plt.plot(x, y2, label="MD PS 99th")
+    #plt.plot(x, y2, label="MD PS 99th")
     #plt.plot(x, y2, label="MD PS 50th")
+
+    # plot mlg1 ps
+    rtc_data = parse_file("mlg1_ps.dat")
+    x, y1, y2 = zip(*rtc_data)
+    y1 = map(lambda a: a/float(service_time), y1)
+    y2 = map(lambda a: a/float(service_time), y2)
+    #plt.plot(x, y1, label="MLG PS average")
+    #plt.plot(x, y2, label="MLG PS 99th")
+    plt.plot(x, y2, label="MLG PS 50th")
 
 
     '''
@@ -100,7 +119,8 @@ def main():
     # plot horizontal line at 1
     plt.axhline(y=1)
     axes = plt.gca()
-    axes.set_ylim([0,100])
+    #axes.set_yscale("log")
+    #axes.set_ylim([0,100])
     plt.xlabel("rho")
     plt.ylabel("lantency normalized to service_time")
     plt.legend()

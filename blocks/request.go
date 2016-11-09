@@ -72,6 +72,7 @@ func (hdr *histogram) stddev() float64 {
 	return math.Sqrt(square_avg - mean*mean)
 }
 
+//FIXME: I assume that in every bucket there will be max one percentile
 func (hdr *histogram) getPercentiles() map[float64]float64 {
 	accum := make([]int, bUCKET_COUNT)
 	res := map[float64]float64{}
@@ -79,6 +80,17 @@ func (hdr *histogram) getPercentiles() map[float64]float64 {
 	percentile_i := 0
 
 	accum[hdr.minBucket] = hdr.buckets[hdr.minBucket]
+
+	// what if percentiles in the first bucket
+	// i assume only 50th can be in the first bucket -> FIXME
+	if float64(accum[0]) > percentiles[percentile_i]*float64(hdr.count) {
+		// linear interpolation
+
+		res[percentiles[percentile_i]] = hdr.granularity / float64(hdr.buckets[0]) * (percentiles[percentile_i] * float64(hdr.count))
+
+		percentile_i++
+	}
+
 	for i := hdr.minBucket + 1; i <= hdr.maxBucket; i++ {
 		accum[i] = accum[i-1] + hdr.buckets[i]
 
@@ -116,6 +128,13 @@ func NewBookKeeper() *BookKeeper {
 }
 
 func (b *BookKeeper) TerminateReq(r Request) {
+	// FIXME: there is something wrong here
+	// panics sometimes with: index out of range
+	d := r.getDelay()
+	//fmt.Printf("%v\n", d)
+	if d < 0 {
+		panic("Request with negative service time")
+	}
 	b.hdr.addSample(r.getDelay())
 }
 
