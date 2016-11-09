@@ -49,10 +49,12 @@ func main() {
 	if *processorType == "rtc" {
 		//Add a run to completion processor
 		processor = &blocks.RTCProcessor{}
+		processor.SetCtxCost(5)
 	} else if *processorType == "ts" {
-		//Add a shared processor
+		//Add a time-shared processor
 		processor = blocks.NewTSProcessor(*quantum)
 	} else if *processorType == "ps" {
+		// Add a processor sharing processor
 		processor = blocks.NewPSProcessor()
 	}
 	processor.SetReqDrain(stats)

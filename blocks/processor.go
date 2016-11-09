@@ -9,6 +9,7 @@ import (
 type Processor interface {
 	engine.ActorInterface
 	SetReqDrain(rd RequestDrain) // We might want to specify different drains for different processors or use the same drain for all
+	SetCtxCost(cost float64)
 }
 
 type RequestDrain interface {
@@ -19,6 +20,7 @@ type RequestDrain interface {
 type genericProcessor struct {
 	engine.Actor
 	reqDrain RequestDrain
+	ctxCost  float64
 }
 
 func (p *genericProcessor) GetGenericActor() *engine.Actor {
@@ -27,6 +29,10 @@ func (p *genericProcessor) GetGenericActor() *engine.Actor {
 
 func (p *genericProcessor) SetReqDrain(rd RequestDrain) {
 	p.reqDrain = rd
+}
+
+func (p *genericProcessor) SetCtxCost(cost float64) {
+	p.ctxCost = cost
 }
 
 // Run to completion processor
@@ -38,7 +44,7 @@ func (p *RTCProcessor) Run() {
 	for {
 		req := p.ReadInQueue().(Request)
 		//fmt.Printf("Processor: read from queue val = %v TIME = %v\n", req.ServiceTime, engine.GetTime())
-		p.Wait(req.ServiceTime)
+		p.Wait(req.ServiceTime + p.ctxCost)
 		p.reqDrain.TerminateReq(req)
 	}
 }
@@ -59,10 +65,10 @@ func (p *TSProcessor) Run() {
 		//fmt.Printf("Processor: read from queue val = %v TIME = %v\n", req.ServiceTime, engine.GetTime())
 
 		if req.ServiceTime <= p.quantum {
-			p.Wait(req.ServiceTime)
+			p.Wait(req.ServiceTime + p.ctxCost)
 			p.reqDrain.TerminateReq(req)
 		} else {
-			p.Wait(p.quantum)
+			p.Wait(p.quantum + p.ctxCost)
 			req.ServiceTime -= p.quantum
 			p.WriteInQueue(req)
 		}
