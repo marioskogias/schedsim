@@ -6,14 +6,32 @@ import (
 	"github.com/marioskogias/schedsim/engine"
 )
 
+type Processor interface {
+	engine.ActorInterface
+	SetReqDrain(rd RequestDrain) // We might want to specify different drains for different processors or use the same drain for all
+}
+
 type RequestDrain interface {
 	TerminateReq(r Request)
 }
 
-// Run to completion processor
-type RTCProcessor struct {
+// generic processor: All processors should have it as an embedded field
+type genericProcessor struct {
 	engine.Actor
 	reqDrain RequestDrain
+}
+
+func (p *genericProcessor) GetGenericActor() *engine.Actor {
+	return &p.Actor
+}
+
+func (p *genericProcessor) SetReqDrain(rd RequestDrain) {
+	p.reqDrain = rd
+}
+
+// Run to completion processor
+type RTCProcessor struct {
+	genericProcessor
 }
 
 func (p *RTCProcessor) Run() {
@@ -25,19 +43,10 @@ func (p *RTCProcessor) Run() {
 	}
 }
 
-func (p *RTCProcessor) GetGenericActor() *engine.Actor {
-	return &p.Actor
-}
-
-func (p *RTCProcessor) SetReqDrain(rd RequestDrain) {
-	p.reqDrain = rd
-}
-
 // Time sharing processor
 type TSProcessor struct {
-	engine.Actor
-	reqDrain RequestDrain
-	quantum  float64
+	genericProcessor
+	quantum float64
 }
 
 func NewTSProcessor(quantum float64) *TSProcessor {
@@ -60,18 +69,9 @@ func (p *TSProcessor) Run() {
 	}
 }
 
-func (a *TSProcessor) GetGenericActor() *engine.Actor {
-	return &a.Actor
-}
-
-func (a *TSProcessor) SetReqDrain(rd RequestDrain) {
-	a.reqDrain = rd
-}
-
 // Processor sharing processor
 type PSProcessor struct {
-	engine.Actor
-	reqDrain RequestDrain
+	genericProcessor
 	count    int // how many concurrent requests
 	reqList  *list.List
 	curr     *list.Element
@@ -138,12 +138,4 @@ func (p *PSProcessor) Run() {
 			d = -1
 		}
 	}
-}
-
-func (a *PSProcessor) GetGenericActor() *engine.Actor {
-	return &a.Actor
-}
-
-func (a *PSProcessor) SetReqDrain(rd RequestDrain) {
-	a.reqDrain = rd
 }

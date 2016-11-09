@@ -17,7 +17,7 @@ func main() {
 	*/
 	var mu = flag.Float64("mu", 0.02, "mu service rate") // default 50usec
 	var lambda = flag.Float64("lambda", 0.005, "lambda poisson interarrival")
-	var processor = flag.String("processor", "rtc", "ts or rtc")
+	var processorType = flag.String("processorType", "rtc", "ts or rtc")
 	var duration = flag.Float64("duration", 100000000, "experiment duration")
 	var quantum = flag.Float64("quantum", 0.5, "processor quantum")
 	var service = flag.String("service", "m", "m or d or lg")
@@ -55,25 +55,20 @@ func main() {
 	stats := blocks.NewBookKeeper()
 	engine.InitStats(stats)
 
+	var processor blocks.Processor
 	// FIXME: handle processor type properly
-	if *processor == "rtc" {
+	if *processorType == "rtc" {
 		//Add a run to completion processor
-		processor := &blocks.RTCProcessor{}
-		processor.SetInQueue(q)
-		processor.SetReqDrain(stats)
-		engine.RegisterActor(processor)
-	} else if *processor == "ts" {
+		processor = &blocks.RTCProcessor{}
+	} else if *processorType == "ts" {
 		//Add a shared processor
-		processor := blocks.NewTSProcessor(*quantum)
-		processor.SetInQueue(q)
-		processor.SetReqDrain(stats)
-		engine.RegisterActor(processor)
-	} else if *processor == "ps" {
-		processor := blocks.NewPSProcessor()
-		processor.SetInQueue(q)
-		processor.SetReqDrain(stats)
-		engine.RegisterActor(processor)
+		processor = blocks.NewTSProcessor(*quantum)
+	} else if *processorType == "ps" {
+		processor = blocks.NewPSProcessor()
 	}
+	processor.SetInQueue(q)
+	processor.SetReqDrain(stats)
+	engine.RegisterActor(processor)
 
 	//Register actors
 

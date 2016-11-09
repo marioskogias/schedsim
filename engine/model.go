@@ -69,9 +69,11 @@ func newModel() *model {
 type ActorInterface interface {
 	Run()
 	GetGenericActor() *Actor
+	SetInQueue(q QueueInterface)
+	SetOutQueue(q QueueInterface)
 }
 
-func (m *model) RegisterActor(a ActorInterface) {
+func (m *model) registerActor(a ActorInterface) {
 	genericActor := a.GetGenericActor()
 	genericActor.toModelEvent = m.eventChan
 	genericActor.toModelQueue = m.queueChan
@@ -236,7 +238,7 @@ func GetTime() float64 {
 }
 
 func RegisterActor(a ActorInterface) {
-	mdl.RegisterActor(a)
+	mdl.registerActor(a)
 }
 
 func Run(threshold float64) {
