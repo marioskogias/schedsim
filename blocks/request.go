@@ -51,8 +51,11 @@ func newHistogram() *histogram {
 
 func (hdr *histogram) addSample(s float64) {
 	index := int(s / hdr.granularity)
-	if index > bUCKET_COUNT {
+	if index >= bUCKET_COUNT {
 		index = bUCKET_COUNT - 1
+	}
+	if index < 0 || index >= bUCKET_COUNT {
+		panic(fmt.Sprintf("Wrong index: %v\n", index))
 	}
 	hdr.buckets[index]++
 	if index > hdr.maxBucket {
@@ -141,7 +144,7 @@ func (b *BookKeeper) TerminateReq(r Request) {
 	if d < 0 {
 		panic("Request with negative service time")
 	}
-	b.hdr.addSample(r.getDelay())
+	b.hdr.addSample(d)
 }
 
 func (b *BookKeeper) PrintStats() {
