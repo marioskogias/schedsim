@@ -137,3 +137,42 @@ func (g *MLNGenerator) Run() {
 		g.Wait(g.getDelay())
 	}
 }
+
+// DBGenerator (deterministic bimodal) is a poisson interarrival generator with
+// requests with bimodal service times (2 values)
+type DBGenerator struct {
+	genericGenerator
+	waitLambda float64
+	peak1      float64
+	peak2      float64
+	ratio      float64
+}
+
+func NewDBGenerator(waitLambda, peak1, peak2, ratio float64) *DBGenerator {
+	// Seed with time
+	rand.Seed(time.Now().UTC().UnixNano())
+
+	return &DBGenerator{waitLambda: waitLambda, peak1: peak1, peak2: peak2, ratio: ratio}
+}
+
+func (g *DBGenerator) getDelay() float64 {
+	d := float64(rand.ExpFloat64() / g.waitLambda)
+	//fmt.Printf("%v\n", d)
+	return d
+}
+
+func (g *DBGenerator) getServiceTime() float64 {
+	if rand.Float64() > g.ratio {
+		return g.peak2
+	}
+	return g.peak1
+}
+
+func (g *DBGenerator) Run() {
+	for {
+		//fmt.Printf("Generator: will add in queue TIME = %v\n", engine.GetTime())
+		req := NewRequest(g.getServiceTime())
+		g.WriteOutQueue(req)
+		g.Wait(g.getDelay())
+	}
+}

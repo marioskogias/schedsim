@@ -42,6 +42,8 @@ func main() {
 		// FIXME: make this parametrizable
 		// for mean ~ 50 mu = 1 sigma = 2.41
 		generator = blocks.NewMLNGenerator(*lambda, 1, 2.41)
+	} else if *service == "b" {
+		generator = blocks.NewDBGenerator(*lambda, 5, 905, 0.95)
 	}
 
 	// Create a processor
