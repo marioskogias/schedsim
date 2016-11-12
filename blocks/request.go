@@ -87,26 +87,27 @@ func (hdr *histogram) getPercentiles() map[float64]float64 {
 	accum[hdr.minBucket] = hdr.buckets[hdr.minBucket]
 
 	// what if percentiles in the first bucket
-	// i assume only 50th can be in the first bucket -> FIXME
-	if float64(accum[0]) > percentiles[percentile_i]*float64(hdr.count) {
+	for float64(accum[hdr.minBucket]) > percentiles[percentile_i]*float64(hdr.count) {
 		// linear interpolation
 
-		res[percentiles[percentile_i]] = hdr.granularity / float64(hdr.buckets[0]) * (percentiles[percentile_i] * float64(hdr.count))
+		res[percentiles[percentile_i]] = hdr.granularity / float64(hdr.buckets[hdr.minBucket]) * (percentiles[percentile_i] * float64(hdr.count))
 
 		percentile_i++
+	}
+	if percentile_i >= len(percentiles) {
+		return res
 	}
 
 	for i := hdr.minBucket + 1; i <= hdr.maxBucket; i++ {
 		accum[i] = accum[i-1] + hdr.buckets[i]
-
-		if float64(accum[i]) > percentiles[percentile_i]*float64(hdr.count) {
+		for float64(accum[i]) > percentiles[percentile_i]*float64(hdr.count) {
 			// linear interpolation
 			down := hdr.granularity * float64(i-1)
 
 			res[percentiles[percentile_i]] = down + hdr.granularity/float64(hdr.buckets[i])*(percentiles[percentile_i]*float64(hdr.count)-float64(accum[i-1]))
 			percentile_i++
 			if percentile_i >= len(percentiles) {
-				break
+				return res
 			}
 		}
 	}
