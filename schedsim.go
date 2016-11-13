@@ -21,6 +21,7 @@ func main() {
 	var duration = flag.Float64("duration", 100000000, "experiment duration")
 	var quantum = flag.Float64("quantum", 0.5, "processor quantum")
 	var service = flag.String("service", "m", "m or d or lg")
+	var ctxCost = flag.Float64("ctxCost", 0, "context switch costs")
 
 	flag.Parse()
 
@@ -51,10 +52,11 @@ func main() {
 	if *processorType == "rtc" {
 		//Add a run to completion processor
 		processor = &blocks.RTCProcessor{}
-		processor.SetCtxCost(5)
+		processor.SetCtxCost(*ctxCost)
 	} else if *processorType == "ts" {
 		//Add a time-shared processor
 		processor = blocks.NewTSProcessor(*quantum)
+		processor.SetCtxCost(*ctxCost)
 	} else if *processorType == "ps" {
 		// Add a processor sharing processor
 		processor = blocks.NewPSProcessor()
@@ -72,6 +74,6 @@ func main() {
 	engine.RegisterActor(generator)
 	engine.RegisterActor(processor)
 
-	fmt.Printf("rho = %v\n", *lambda / *mu)
+	fmt.Printf("rho=%v\toffered_qps=%v\tservice_rate=%v\n", *lambda / *mu, *lambda, *mu)
 	engine.Run(*duration)
 }

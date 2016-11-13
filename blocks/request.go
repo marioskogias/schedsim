@@ -124,6 +124,8 @@ func (hdr *histogram) printPercentiles() {
 		fmt.Printf("%vth: %v\t", int(v*100.0), percentiles[v])
 	}
 	fmt.Println()
+
+	fmt.Printf("Req/time_unit:%v\n", float64(hdr.count)/engine.GetTime())
 }
 
 type BookKeeper struct {
