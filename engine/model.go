@@ -69,8 +69,8 @@ func newModel() *model {
 type ActorInterface interface {
 	Run()
 	GetGenericActor() *Actor
-	SetInQueue(q QueueInterface)
-	SetOutQueue(q QueueInterface)
+	AddInQueue(q QueueInterface)
+	AddOutQueue(q QueueInterface)
 }
 
 func (m *model) registerActor(a ActorInterface) {
@@ -145,16 +145,17 @@ type QueueInterface interface {
 type Actor struct {
 	toModelEvent chan *event
 	toModelQueue chan *blockEvent
-	inQueue      QueueInterface
-	outQueue     QueueInterface
+	inQueues     []QueueInterface
+	outQueues    []QueueInterface
 }
 
-func (a *Actor) SetInQueue(q QueueInterface) {
-	a.inQueue = q
+// In and out queues should be added in decreasing priority
+func (a *Actor) AddInQueue(q QueueInterface) {
+	a.inQueues = append(a.inQueues, q)
 }
 
-func (a *Actor) SetOutQueue(q QueueInterface) {
-	a.outQueue = q
+func (a *Actor) AddOutQueue(q QueueInterface) {
+	a.outQueues = append(a.outQueues, q)
 }
 
 func (a *Actor) Wait(d float64) {
@@ -181,8 +182,8 @@ func (a *Actor) WaitInterruptible(d float64, intr <-chan int) {
 }
 
 func (a *Actor) ReadInQueueTimeOut(d float64) (bool, interface{}) {
-	if a.inQueue.Len() > 0 {
-		return false, a.inQueue.Dequeue()
+	if a.inQueues[0].Len() > 0 {
+		return false, a.inQueues[0].Dequeue()
 	}
 
 	// Negative timeout - no timeout
@@ -195,11 +196,11 @@ func (a *Actor) ReadInQueueTimeOut(d float64) (bool, interface{}) {
 	e.toOwner = ch
 	bEvent := &blockEvent{timeOutEvent: e, wakeUpCh: ch, active: true}
 	a.toModelQueue <- bEvent
-	for {
+	for { // this is because the run time tries to run the actors on every iteration
 		<-ch
-		if a.inQueue.Len() > 0 {
+		if a.inQueues[0].Len() > 0 {
 			e.active = false
-			return false, a.inQueue.Dequeue()
+			return false, a.inQueues[0].Dequeue()
 		}
 		if mdl.getTime() == timeoutTime {
 			bEvent.active = false
@@ -211,8 +212,24 @@ func (a *Actor) ReadInQueueTimeOut(d float64) (bool, interface{}) {
 }
 
 func (a *Actor) ReadInQueue() interface{} {
-	if a.inQueue.Len() > 0 {
-		return a.inQueue.Dequeue()
+	if a.inQueues[0].Len() > 0 {
+		return a.inQueues[0].Dequeue()
+	}
+	ch := make(chan int)
+	bEvent := &blockEvent{timeOutEvent: nil, wakeUpCh: ch, active: true}
+	a.toModelQueue <- bEvent
+	<-ch
+	return a.ReadInQueue()
+}
+
+// This function tries to read from all the queues in descending priority
+// and blocks only if all the queues are empty. In returns the element of the
+// first queue found non-empty
+func (a *Actor) ReadInQueues() interface{} {
+	for _, q := range a.inQueues {
+		if q.Len() > 0 {
+			return q.Dequeue()
+		}
 	}
 	ch := make(chan int)
 	bEvent := &blockEvent{timeOutEvent: nil, wakeUpCh: ch, active: true}
@@ -222,11 +239,19 @@ func (a *Actor) ReadInQueue() interface{} {
 }
 
 func (a *Actor) WriteOutQueue(el interface{}) {
-	a.outQueue.Enqueue(el)
+	a.outQueues[0].Enqueue(el)
 }
 
 func (a *Actor) WriteInQueue(el interface{}) {
-	a.inQueue.Enqueue(el)
+	a.inQueues[0].Enqueue(el)
+}
+
+func (a *Actor) WriteOutQueueI(el interface{}, i int) {
+	a.outQueues[i].Enqueue(el)
+}
+
+func (a *Actor) WriteInQueueI(el interface{}, i int) {
+	a.inQueues[i].Enqueue(el)
 }
 
 func InitSim() {

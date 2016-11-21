@@ -67,8 +67,8 @@ func main() {
 	q := blocks.NewQueue()
 
 	// Create the topology
-	generator.SetOutQueue(q)
-	processor.SetInQueue(q)
+	generator.AddOutQueue(q)
+	processor.AddInQueue(q)
 
 	// Register Actors
 	engine.RegisterActor(generator)
