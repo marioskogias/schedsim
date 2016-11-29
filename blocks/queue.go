@@ -3,20 +3,29 @@ package blocks
 import (
 	"container/heap"
 	"container/list"
+	//"sort"
+	"fmt"
+	//"github.com/marioskogias/schedsim/engine"
 )
+
+var count = 0
 
 // Simple FIFO queue
 type Queue struct {
-	l *list.List
+	l  *list.List
+	id int
 }
 
 func NewQueue() *Queue {
 	q := &Queue{}
 	q.l = list.New()
+	q.id = count
+	count++
 	return q
 }
 
 func (q *Queue) Enqueue(el interface{}) {
+	//fmt.Printf("time: %v, queue: %v, len: %v\n", engine.GetTime(), q.id, q.Len())
 	q.l.PushBack(el)
 }
 
@@ -33,6 +42,7 @@ func (q *Queue) Len() int {
 // PriorityQueue
 type Comparable interface {
 	GetCmpVal() float64
+	GetServiceTime() float64
 }
 
 type pQueue []Comparable
@@ -70,4 +80,25 @@ func NewPQueue() *PQueue {
 	heap.Init(&q.pq)
 
 	return q
+}
+
+func (pq *PQueue) Enqueue(el interface{}) {
+	fmt.Printf("%v\t", pq.Len())
+	pq.PrintQueue()
+	fmt.Printf("\n")
+	heap.Push(&pq.pq, el)
+}
+
+func (pq *PQueue) Dequeue() interface{} {
+	return heap.Pop(&pq.pq)
+}
+
+func (pq *PQueue) Len() int {
+	return pq.pq.Len()
+}
+
+func (pq *PQueue) PrintQueue() {
+	for _, v := range pq.pq {
+		fmt.Printf("%v\t", v.GetServiceTime())
+	}
 }

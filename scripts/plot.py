@@ -48,19 +48,11 @@ def plot_data(data, name, p):
     x = map(lambda a,b: a/b, qps, mu)
     plt.plot(x, y, label="{} {}".format(name, p))
 
-def parse_ps():
-    quantums = range(10, 200, 20)
-    res = {}
-    for q in quantums:
-        res[q] = parse_file("mm1_ts_{}.dat".format(q))
-    return res
-
 def main():
 
-    for c in [0, 0.001, 0.01, 0.1, 0.25, 0.5]:
-        data = parse_file("data/mm1_rtc_c_{}.dat".format(c))
-        plot_data(data,"MM RTC c={}".format(c), 99)
-
+    # Plotting goes here
+    data = parse_file("data/multicore_s0_q500.dat")
+    plot_data(data,"0 slow", 99)
 
     # plot horizontal line at 1
     plt.axhline(y=1)
@@ -68,15 +60,15 @@ def main():
     axes = plt.gca()
     # set log y axis
     #axes.set_yscale("log")
-
     # y axis limit
-    axes.set_ylim([0,100])
+    #axes.set_ylim([0,1000])
 
-    plt.xlabel("rho")
+    axes.get_xaxis().set_ticks([])
+
+    plt.xlabel("RPS")
     plt.ylabel("lantency normalized to service_time")
     plt.legend()
     plt.show()
-    #plt.savefig('images/example.eps', format='eps', dpi=1000)
 
 if __name__ == "__main__":
     main()

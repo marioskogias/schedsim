@@ -2,6 +2,7 @@ package blocks
 
 import (
 	"container/list"
+	//	"fmt"
 
 	"github.com/marioskogias/schedsim/engine"
 )
@@ -38,11 +39,15 @@ func (p *genericProcessor) SetCtxCost(cost float64) {
 // Run to completion processor
 type RTCProcessor struct {
 	genericProcessor
+	scale float64
 }
 
 func (p *RTCProcessor) Run() {
 	for {
+		//		t1 := engine.GetTime()
 		req := p.ReadInQueue().(Request)
+		//		t2 := engine.GetTime()
+		//		fmt.Printf("%v\n", t2-t1)
 		//fmt.Printf("Processor: read from queue val = %v TIME = %v\n", req.ServiceTime, engine.GetTime())
 		p.Wait(req.ServiceTime + p.ctxCost)
 		p.reqDrain.TerminateReq(req)
@@ -143,5 +148,49 @@ func (p *PSProcessor) Run() {
 		} else {
 			d = -1
 		}
+	}
+}
+
+// Run to hybrid processor processor
+type HybridProcessor struct {
+	genericProcessor
+	Threshold float64
+}
+
+func NewHybridProcessor(quantum float64) *HybridProcessor {
+	return &HybridProcessor{Threshold: quantum}
+}
+
+func (p *HybridProcessor) Run() {
+	for {
+		req := p.ReadInQueue().(Request)
+		//fmt.Printf("Processor: read from queue val = %v TIME = %v\n", req.ServiceTime, engine.GetTime())
+		if req.ServiceTime <= p.Threshold {
+			p.Wait(req.ServiceTime + p.ctxCost)
+			p.reqDrain.TerminateReq(req)
+		} else {
+			p.Wait(p.Threshold + p.ctxCost)
+			req.ServiceTime -= p.Threshold
+			p.WriteOutQueue(req)
+		}
+	}
+}
+
+// QoS processor
+type QoSProcessor struct {
+	genericProcessor
+	reqDrains []RequestDrain
+}
+
+func (p *QoSProcessor) SetReqDrain(rd RequestDrain) {
+	p.reqDrains = append(p.reqDrains, rd)
+}
+
+func (p *QoSProcessor) Run() {
+	for {
+		reqI, _ := p.ReadInQueuesW()
+		req := reqI.(Request)
+		p.Wait(req.ServiceTime + p.ctxCost)
+		p.reqDrains[req.QoS].TerminateReq(req)
 	}
 }

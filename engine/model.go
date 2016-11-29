@@ -3,9 +3,11 @@ package engine
 import (
 	"container/heap"
 	"container/list"
+	"math/rand"
 )
 
 var mdl *model
+var Weight float32
 
 type event struct {
 	time    float64
@@ -52,7 +54,7 @@ type model struct {
 	queueChan       chan *blockEvent
 	actorCount      int
 	pq              priorityQueue
-	bookkeeping     Stats
+	bookkeeping     []Stats
 }
 
 func newModel() *model {
@@ -71,6 +73,7 @@ type ActorInterface interface {
 	GetGenericActor() *Actor
 	AddInQueue(q QueueInterface)
 	AddOutQueue(q QueueInterface)
+	GetOutQueueLengths() []int
 }
 
 func (m *model) registerActor(a ActorInterface) {
@@ -132,10 +135,11 @@ func (m *model) run(threshold float64) {
 		// wait till process adds event or blocks in queue
 		m.waitActor()
 	}
-	m.bookkeeping.PrintStats()
+	for _, s := range m.bookkeeping {
+		s.PrintStats()
+	}
 }
 
-//FIXME remove integers with real requests or sth generic
 type QueueInterface interface {
 	Enqueue(interface{})
 	Dequeue() interface{}
@@ -156,6 +160,10 @@ func (a *Actor) AddInQueue(q QueueInterface) {
 
 func (a *Actor) AddOutQueue(q QueueInterface) {
 	a.outQueues = append(a.outQueues, q)
+}
+
+func (a *Actor) GetInQueueLen(idx int) int {
+	return a.inQueues[idx].Len()
 }
 
 func (a *Actor) Wait(d float64) {
@@ -225,17 +233,103 @@ func (a *Actor) ReadInQueue() interface{} {
 // This function tries to read from all the queues in descending priority
 // and blocks only if all the queues are empty. In returns the element of the
 // first queue found non-empty
-func (a *Actor) ReadInQueues() interface{} {
-	for _, q := range a.inQueues {
+func (a *Actor) ReadInQueues() (interface{}, int) {
+	for i, q := range a.inQueues {
 		if q.Len() > 0 {
-			return q.Dequeue()
+			return q.Dequeue(), i
 		}
 	}
 	ch := make(chan int)
 	bEvent := &blockEvent{timeOutEvent: nil, wakeUpCh: ch, active: true}
 	a.toModelQueue <- bEvent
 	<-ch
-	return a.ReadInQueue()
+	return a.ReadInQueues()
+}
+
+type queueIdx struct {
+	idx int
+	q   QueueInterface
+}
+
+func (a *Actor) ReadInQueuesRand() (interface{}, int) {
+	var available []queueIdx
+	for i, q := range a.inQueues {
+		if q.Len() > 0 {
+			available = append(available, queueIdx{i, q})
+		}
+	}
+	if len(available) > 0 {
+		q := available[rand.Intn(len(available))]
+		return q.q.Dequeue(), q.idx
+	}
+	ch := make(chan int)
+	bEvent := &blockEvent{timeOutEvent: nil, wakeUpCh: ch, active: true}
+	a.toModelQueue <- bEvent
+	<-ch
+	return a.ReadInQueues()
+}
+
+func (a *Actor) ReadInQueuesRandLocalPr() (interface{}, int) {
+	if a.inQueues[0].Len() > 0 {
+		return a.inQueues[0].Dequeue(), 0
+	}
+	var available []queueIdx
+	for i, q := range a.inQueues {
+		if q.Len() > 0 {
+			available = append(available, queueIdx{i, q})
+		}
+	}
+	if len(available) > 0 {
+		q := available[rand.Intn(len(available))]
+		return q.q.Dequeue(), q.idx
+	}
+	ch := make(chan int)
+	bEvent := &blockEvent{timeOutEvent: nil, wakeUpCh: ch, active: true}
+	a.toModelQueue <- bEvent
+	<-ch
+	return a.ReadInQueues()
+}
+
+// WRR approximation
+func (a *Actor) ReadInQueuesW() (interface{}, int) {
+
+	if len(a.inQueues) >= 2 {
+		if rand.Float32() >= Weight {
+			if a.inQueues[0].Len() > 0 {
+				return a.inQueues[0].Dequeue(), 0
+			} else {
+				if a.inQueues[1].Len() > 0 {
+					return a.inQueues[1].Dequeue(), 1
+				}
+			}
+		} else {
+			if a.inQueues[1].Len() > 0 {
+				return a.inQueues[1].Dequeue(), 1
+			} else {
+				if a.inQueues[0].Len() > 0 {
+					return a.inQueues[0].Dequeue(), 0
+				}
+			}
+		}
+		if len(a.inQueues) == 3 {
+			if a.inQueues[2].Len() > 0 {
+				return a.inQueues[2].Dequeue(), 2
+
+			}
+		}
+	} else {
+		for i, q := range a.inQueues {
+			if q.Len() > 0 {
+				return q.Dequeue(), i
+			}
+		}
+	}
+
+	ch := make(chan int)
+	bEvent := &blockEvent{timeOutEvent: nil, wakeUpCh: ch, active: true}
+	a.toModelQueue <- bEvent
+	<-ch
+	return a.ReadInQueues()
 }
 
 func (a *Actor) WriteOutQueue(el interface{}) {
@@ -252,6 +346,18 @@ func (a *Actor) WriteOutQueueI(el interface{}, i int) {
 
 func (a *Actor) WriteInQueueI(el interface{}, i int) {
 	a.inQueues[i].Enqueue(el)
+}
+
+func (a *Actor) GetOutQueueLengths() []int {
+	res := make([]int, len(a.outQueues))
+	for i, q := range a.outQueues {
+		res[i] = q.Len()
+	}
+	return res
+}
+
+func (a *Actor) OutQueueCount() int {
+	return len(a.outQueues)
 }
 
 func InitSim() {
@@ -275,5 +381,5 @@ type Stats interface {
 }
 
 func InitStats(s Stats) {
-	mdl.bookkeeping = s
+	mdl.bookkeeping = append(mdl.bookkeeping, s)
 }

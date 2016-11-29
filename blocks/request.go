@@ -16,6 +16,10 @@ type Request struct {
 	InitTime       float64
 	ServiceTime    float64
 	serviceTimeImm float64 // This is an immutable version of the service time
+	Processed      bool
+	DeadLine       float64
+	PropDelay      float64
+	QoS            int
 }
 
 func NewRequest(serviceTime float64) Request {
@@ -27,7 +31,17 @@ func (r *Request) GetInitialServiceTime() float64 {
 }
 
 func (r *Request) getDelay() float64 {
-	return engine.GetTime() - r.InitTime
+	return engine.GetTime() - r.InitTime + r.PropDelay
+}
+
+func (r Request) GetCmpVal() float64 {
+	return r.InitTime
+	//d := r.DeadLine - engine.GetTime()
+	//return d
+}
+
+func (r Request) GetServiceTime() float64 {
+	return r.ServiceTime
 }
 
 type histogram struct {
@@ -129,13 +143,18 @@ func (hdr *histogram) printPercentiles() {
 }
 
 type BookKeeper struct {
-	hdr *histogram
+	hdr  *histogram
+	name string
 }
 
 func NewBookKeeper() *BookKeeper {
 	return &BookKeeper{
 		hdr: newHistogram(),
 	}
+}
+
+func (b *BookKeeper) SetName(name string) {
+	b.name = name
 }
 
 func (b *BookKeeper) TerminateReq(r Request) {
@@ -150,6 +169,6 @@ func (b *BookKeeper) TerminateReq(r Request) {
 }
 
 func (b *BookKeeper) PrintStats() {
-	fmt.Printf("Count: %v AVG: %v STDDev: %v \n", b.hdr.count, b.hdr.avg(), b.hdr.stddev())
+	fmt.Printf("%v\nCount: %v AVG: %v STDDev: %v \n", b.name, b.hdr.count, b.hdr.avg(), b.hdr.stddev())
 	b.hdr.printPercentiles()
 }
