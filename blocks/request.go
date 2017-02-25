@@ -106,9 +106,7 @@ func (hdr *histogram) getPercentiles() map[float64]float64 {
 	// what if percentiles in the first bucket
 	for float64(accum[hdr.minBucket]) > percentiles[percentile_i]*float64(hdr.count) {
 		// linear interpolation
-
 		res[percentiles[percentile_i]] = hdr.granularity / float64(hdr.buckets[hdr.minBucket]) * (percentiles[percentile_i] * float64(hdr.count))
-
 		percentile_i++
 	}
 	if percentile_i >= len(percentiles) {
@@ -158,17 +156,19 @@ func (b *BookKeeper) SetName(name string) {
 }
 
 func (b *BookKeeper) TerminateReq(r Request) {
-	// FIXME: there is something wrong here
-	// panics sometimes with: index out of range
 	d := r.getDelay()
-	//fmt.Printf("%v\n", d)
-	if d < 0 {
-		panic("Request with negative service time")
-	}
 	b.hdr.addSample(d)
 }
 
 func (b *BookKeeper) PrintStats() {
-	fmt.Printf("%v\nCount: %v AVG: %v STDDev: %v \n", b.name, b.hdr.count, b.hdr.avg(), b.hdr.stddev())
-	b.hdr.printPercentiles()
+	fmt.Printf("Stats collector: %v\n", b.name)
+	fmt.Printf("Count\tAVG\tSTDDev\t50th\t90th\t95th\t99th Reqs/time_unit\n")
+	fmt.Printf("%v\t%v\t%v\t", b.hdr.count, b.hdr.avg(), b.hdr.stddev())
+
+	vals := []float64{0.5, 0.9, 0.95, 0.99}
+	percentiles := b.hdr.getPercentiles()
+	for _, v := range vals {
+		fmt.Printf("%v\t", percentiles[v])
+	}
+	fmt.Printf("%v\n", float64(b.hdr.count)/engine.GetTime())
 }

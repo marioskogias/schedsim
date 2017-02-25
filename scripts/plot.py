@@ -6,33 +6,32 @@ def parse_file(fname):
     with open(fname, 'r') as f:
         l = f.readline()
         while l:
-            # get mu
-            mu = float(l.split("\t")[2].split("=")[1])
-
-            # get avg
             l = f.readline()
-            avg = float(l.split(" ")[3])
+            data = l.split("\t")
+            cores = int(data[0].split(":")[1])
+            mu = float(data[1].split(":")[1])
+            intr_lambda = float(data[0].split(":")[1])
 
-            # get percentiles
+            l = f.readline() # skip the collector name
+            l = f.readline() # skip label
             l = f.readline()
             tmp = l.split("\t")
-            p50 = float(tmp[0].split(" ")[1])
-            p90 = float(tmp[1].split(" ")[1])
-            p95 = float(tmp[2].split(" ")[1])
-            p99 = float(tmp[3].split(" ")[1])
 
-            # get achieved requests
-            l = f.readline()
-            qps = float(l.split(":")[1])
+            avg = float(tmp[1])
+            p50 = float(tmp[3])
+            p90 = float(tmp[4])
+            p95 = float(tmp[5])
+            p99 = float(tmp[6])
+            qps = float(tmp[7])
 
             # compute rho
-            res.append((qps, mu, avg, p50, p90, p95, p99))
+            res.append((cores, mu, intr_lambda, qps, avg, p50, p90, p95, p99))
 
             l = f.readline()
     return res
 
 def plot_data(data, name, p):
-    qps, mu, avg, p50, p90, p95, p99 = zip(*data)
+    cores, mu, intr_lambda, qps, avg, p50, p90, p95, p99 = zip(*data)
 
     if p == "avg":
         to_plot = avg
@@ -44,26 +43,27 @@ def plot_data(data, name, p):
         to_plot = p95
     elif p == 99:
         to_plot = p99
-    y = map(lambda a,b: a*b, to_plot, mu)
-    x = map(lambda a,b: a/b, qps, mu)
-    plt.plot(x, y, label="{} {}".format(name, p))
+
+    # Assuming mu and cores are always the same
+    cores = cores[0]
+    mu = mu[0]
+
+    y = map(lambda a: a*mu, to_plot)
+    x = map(lambda a: a/(cores*mu), qps)
+    plt.plot(x, y, label="{} {}".format(name, p), marker='+')
 
 def main():
 
     # Plotting goes here
-    data = parse_file("data/multicore_s0_q500.dat")
-    plot_data(data,"0 slow", 99)
+    data = parse_file("data/single_queue.dat")
+    plot_data(data,"M/M/8", 99)
 
     # plot horizontal line at 1
     plt.axhline(y=1)
 
     axes = plt.gca()
-    # set log y axis
-    #axes.set_yscale("log")
-    # y axis limit
-    #axes.set_ylim([0,1000])
+    axes.set_ylim([0,10])
 
-    axes.get_xaxis().set_ticks([])
 
     plt.xlabel("RPS")
     plt.ylabel("lantency normalized to service_time")

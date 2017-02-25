@@ -5,7 +5,7 @@ from subprocess import call
 from scipy.stats import expon
 from math import log, sqrt
 
-mm116_lambdas = np.arange(0.1, 1.7,0.1)
+mm116_lambdas = np.arange(0.1, 0.9, 0.1)
 
 def single_queue():
     with open("data/single_queue.dat", 'w') as f:

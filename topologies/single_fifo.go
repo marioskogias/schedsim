@@ -13,11 +13,11 @@ func SingleQueue(lambda, mu, duration float64) {
 
 	//Init the statistics
 	stats := blocks.NewBookKeeper()
+	stats.SetName("Main Stats")
 	engine.InitStats(stats)
 
 	// Add generator
-	//g := blocks.NewMMGenerator(lambda, mu) // 50usec sevice time, lambda 0.005
-	g := blocks.NewMDGenerator(lambda, 10)
+	g := blocks.NewMMGenerator(lambda, mu)
 
 	// Create queues
 	q := blocks.NewQueue()
@@ -46,6 +46,6 @@ func SingleQueue(lambda, mu, duration float64) {
 	// Register the generator
 	engine.RegisterActor(g)
 
-	fmt.Printf("rho=%v\toffered_qps=%v\tservice_rate=%v\n", lambda/mu, lambda, mu)
+	fmt.Printf("Cores:%v\tservice_rate:%v\tinterarrival_rate:%v\n", cores, mu, lambda)
 	engine.Run(duration)
 }
