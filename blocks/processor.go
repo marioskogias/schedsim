@@ -2,6 +2,7 @@ package blocks
 
 import (
 	"container/list"
+	"math"
 	//	"fmt"
 
 	"github.com/epfl-dcsl/schedsim/engine"
@@ -211,19 +212,38 @@ func (p *BoundedProcessor2) Run() {
 // fair with the token stealing mechanism (that's hard)
 type VeronaProcessor struct {
 	genericProcessor
-	quantum float64
+	quantum   float64
+	nextSteal int
 }
 
 func (p *VeronaProcessor) Run() {
 	var r engine.ReqInterface
+	var gotReq bool
+
 	for {
-		localCount := p.GetInQueueLen(0)
-		if localCount > 0 {
-			r = p.ReadInQueueI(0)
-		} else {
-			r, _ = p.ReadInQueuesRandLocalPr()
+		if p.nextSteal == 0 {
+			// Avoid queue 0 which is the local queue
+			for i := 1; i < p.GetInQueueCount(); i += 1 {
+				l := p.GetInQueueLen(i)
+				if l > 0 {
+					r = p.ReadInQueueI(i)
+					gotReq = true
+					break
+				}
+			}
+			p.nextSteal = int(math.Max(1.0, float64(p.GetInQueueLen(0))))
+		}
+		if !gotReq {
+			gotReq = false
+			localCount := p.GetInQueueLen(0)
+			if localCount > 0 {
+				r = p.ReadInQueueI(0)
+			} else {
+				r, _ = p.ReadInQueuesRandLocalPr()
+			}
 		}
 
+		// Serve the request
 		if r.GetServiceTime() <= p.quantum {
 			p.Wait(r.GetServiceTime())
 			p.reqDrain.TerminateReq(r)
@@ -232,5 +252,6 @@ func (p *VeronaProcessor) Run() {
 			r.SubServiceTime(p.quantum)
 			p.WriteInQueue(r)
 		}
+		p.nextSteal -= 1
 	}
 }
