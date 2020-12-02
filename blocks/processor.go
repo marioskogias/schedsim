@@ -204,3 +204,33 @@ func (p *BoundedProcessor2) Run() {
 		p.reqDrain.TerminateReq(req)
 	}
 }
+
+// A verona processor is three things:
+// time sharing to emulate a task with many behaviours
+// stealing when idle
+// fair with the token stealing mechanism (that's hard)
+type VeronaProcessor struct {
+	genericProcessor
+	quantum float64
+}
+
+func (p *VeronaProcessor) Run() {
+	var r engine.ReqInterface
+	for {
+		localCount := p.GetInQueueLen(0)
+		if localCount > 0 {
+			r = p.ReadInQueueI(0)
+		} else {
+			r, _ = p.ReadInQueuesRandLocalPr()
+		}
+
+		if r.GetServiceTime() <= p.quantum {
+			p.Wait(r.GetServiceTime())
+			p.reqDrain.TerminateReq(r)
+		} else {
+			p.Wait(p.quantum)
+			r.SubServiceTime(p.quantum)
+			p.WriteInQueue(r)
+		}
+	}
+}
