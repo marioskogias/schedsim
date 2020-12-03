@@ -2,7 +2,6 @@ package blocks
 
 import (
 	"container/list"
-	//	"fmt"
 	"math"
 
 	"github.com/epfl-dcsl/schedsim/engine"
@@ -238,7 +237,6 @@ func (p *VeronaProcessor) Run() {
 			p.nextSteal = int(math.Max(1.0, float64(p.GetInQueueLen(0))))
 		}
 		if !gotReq {
-			gotReq = false
 			localCount := p.GetInQueueLen(0)
 			if localCount > 0 {
 				r = p.ReadInQueueI(0)
@@ -247,6 +245,7 @@ func (p *VeronaProcessor) Run() {
 			}
 		}
 
+		gotReq = false
 		// Serve the request
 		if r.GetServiceTime() <= p.quantum {
 			p.Wait(r.GetServiceTime())
