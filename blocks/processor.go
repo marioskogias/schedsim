@@ -2,8 +2,8 @@ package blocks
 
 import (
 	"container/list"
-	"math"
 	//	"fmt"
+	"math"
 
 	"github.com/epfl-dcsl/schedsim/engine"
 )
@@ -214,6 +214,10 @@ type VeronaProcessor struct {
 	genericProcessor
 	quantum   float64
 	nextSteal int
+}
+
+func NewVeronaProcessor(q float64) *VeronaProcessor {
+	return &VeronaProcessor{quantum: q}
 }
 
 func (p *VeronaProcessor) Run() {
