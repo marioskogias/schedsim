@@ -24,7 +24,7 @@ func main() {
 
 	lambdas := strings.Split(*lambda, ":")
 	lambdaList := make([]float64, 0)
-	if len(lambdas) > 0 {
+	if len(lambdas) > 1 {
 		start, _ := strconv.ParseFloat(lambdas[0], 64)
 		end, _ := strconv.ParseFloat(lambdas[1], 64)
 		step, _ := strconv.ParseFloat(lambdas[2], 64)

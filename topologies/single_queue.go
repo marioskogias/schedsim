@@ -50,6 +50,11 @@ func SingleQueue(lambda, mu, duration float64, genType, procType int) {
 		p.AddInQueue(q)
 		p.SetReqDrain(stats)
 		engine.RegisterActor(p)
+	} else if procType == 2 {
+		p := blocks.NewSRPTProcessor(cores)
+		p.AddInQueue(q)
+		p.SetReqDrain(stats)
+		engine.RegisterActor(p)
 	}
 
 	g.AddOutQueue(q)

@@ -1,6 +1,7 @@
 package blocks
 
 import (
+	"container/heap"
 	"container/list"
 	"math"
 
@@ -256,5 +257,118 @@ func (p *VeronaProcessor) Run() {
 			p.WriteInQueue(r)
 		}
 		p.nextSteal -= 1
+	}
+}
+
+// SRPT Processor keeping requests in a heap
+
+type ReqHeap []engine.ReqInterface
+
+func (h ReqHeap) Len() int           { return len(h) }
+func (h ReqHeap) Less(i, j int) bool { return h[i].GetServiceTime() < h[j].GetServiceTime() }
+func (h ReqHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
+
+func (h *ReqHeap) Push(x interface{}) {
+	// Push and Pop use pointer receivers because they modify the slice's length,
+	// not just its contents.
+	*h = append(*h, x.(engine.ReqInterface))
+}
+
+func (h *ReqHeap) Pop() interface{} {
+	old := *h
+	n := len(old)
+	x := old[n-1]
+	*h = old[0 : n-1]
+	return x
+}
+
+type SRPTProcessor struct {
+	genericProcessor
+	workerCount int
+	reqHeap     ReqHeap
+	activeList  []engine.ReqInterface
+	curr        engine.ReqInterface
+	currIdx     int
+	prevTime    float64
+}
+
+func NewSRPTProcessor(workerCount int) *SRPTProcessor {
+	p := &SRPTProcessor{}
+	p.workerCount = workerCount
+	p.activeList = make([]engine.ReqInterface, workerCount)
+	heap.Init(&p.reqHeap)
+
+	return p
+}
+
+func (p *SRPTProcessor) updateTimes() {
+	currTime := engine.GetTime()
+	diff := currTime - p.prevTime
+	p.prevTime = currTime
+	for _, r := range p.activeList {
+		if r != nil {
+			r.SubServiceTime(diff)
+		}
+	}
+}
+
+func (p *SRPTProcessor) Run() {
+	var d float64
+	d = -1
+	for {
+		intr, newReq := p.WaitInterruptible(d)
+		p.updateTimes()
+		if intr {
+			// If a request finished substitute it from the heap
+			p.reqDrain.TerminateReq(p.curr)
+			if p.reqHeap.Len() == 0 {
+				p.activeList[p.currIdx] = nil
+			} else {
+				el := heap.Pop(&p.reqHeap)
+				p.activeList[p.currIdx] = el.(engine.ReqInterface)
+			}
+		} else {
+			// if new request check if should substitute any of the ones currently running
+			// else push on the heap (-1) or put it in the active list if slot is found
+			subIdx := -1
+			val := 0.0
+			for i, r := range p.activeList {
+				// put it in the list if a slot is found
+				if r == nil {
+					p.activeList[i] = newReq
+					subIdx = -2
+					break
+				}
+				if r.GetServiceTime() > newReq.GetServiceTime() && val < r.GetServiceTime() {
+					val = r.GetServiceTime()
+					subIdx = i
+				}
+			}
+			if subIdx > -1 {
+				heap.Push(&p.reqHeap, p.activeList[subIdx])
+				p.activeList[subIdx] = newReq
+			} else if subIdx == -1 {
+				heap.Push(&p.reqHeap, newReq)
+			}
+		}
+		// Find the next request to wait for from active list
+		idx := -1
+		val := 100000.0
+		for i, r := range p.activeList {
+			if r == nil {
+				continue
+			}
+			if r.GetServiceTime() < val {
+				idx = i
+				val = r.GetServiceTime()
+			}
+		}
+		if idx > -1 {
+			d = p.activeList[idx].GetServiceTime()
+			p.curr = p.activeList[idx]
+			p.currIdx = idx
+		} else {
+			d = -1
+		}
 	}
 }
