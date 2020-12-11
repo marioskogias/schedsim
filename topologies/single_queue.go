@@ -25,9 +25,9 @@ func SingleQueue(lambda, mu, duration float64, genType, procType int) {
 	} else if genType == 1 {
 		g = blocks.NewMDRandGenerator(lambda, 1/mu)
 	} else if genType == 2 {
-		g = blocks.NewMBRandGenerator(lambda, 1, 10*(1/mu-0.9), 0.9)
+		g = blocks.NewMBRandGenerator(lambda, 0.5/mu, 5.5/mu, 0.9)
 	} else if genType == 3 {
-		g = blocks.NewMBRandGenerator(lambda, 1, 1000*(1/mu-0.999), 0.999)
+		g = blocks.NewMBRandGenerator(lambda, 0.5/mu, 500.5/mu, 0.999)
 	}
 
 	g.SetCreator(&blocks.SimpleReqCreator{})

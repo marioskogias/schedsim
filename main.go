@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -20,7 +19,6 @@ func main() {
 	var quantum = flag.Float64("quantum", 1.0, "quantum for TS processors")
 
 	flag.Parse()
-	fmt.Printf("Selected topology: %v\n", *topo)
 
 	lambdas := strings.Split(*lambda, ":")
 	lambdaList := make([]float64, 0)

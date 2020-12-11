@@ -4,6 +4,7 @@ import (
 	"container/heap"
 	"container/list"
 	"math"
+	"math/rand"
 
 	"github.com/epfl-dcsl/schedsim/engine"
 )
@@ -227,7 +228,12 @@ func (p *VeronaProcessor) Run() {
 	for {
 		if p.nextSteal == 0 {
 			// Avoid queue 0 which is the local queue
-			for i := 1; i < p.GetInQueueCount(); i += 1 {
+			base := rand.Intn(p.GetInQueueCount())
+			for i := 0; i < p.GetInQueueCount(); i += 1 {
+				idx := (base + i) % p.GetInQueueCount()
+				if idx == 0 {
+					continue
+				}
 				l := p.GetInQueueLen(i)
 				if l > 0 {
 					r = p.ReadInQueueI(i)
