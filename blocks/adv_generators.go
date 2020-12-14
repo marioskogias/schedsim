@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
+	"container/list"
 )
 
 // PBGenerator implements a playback generator for given service times.
@@ -49,6 +50,44 @@ func (g *PBGenerator) Run() {
 		serviceTime := g.sTimes[i][j]
 		req := g.Creator.NewRequest(float64(serviceTime))
 		g.WriteOutQueueI(req, i)
+		g.Wait(g.WaitTime.getRand())
+	}
+}
+
+// Special generator for Cown scheduling
+type Cown struct {
+	isSchedulled bool
+	queue *list.List
+}
+
+func (c *Cown) GetDelay() float64 {
+	panic("Get Delay in cown")
+}
+
+func (c *Cown) GetServiceTime() float64 {
+	panic("Get ServiceTime in cown")
+}
+
+func (c *Cown) SubServiceTime(_ float64)  {
+	panic("Sub ServiceTime in cown")
+}
+
+type veronaGenerator struct {
+	genericGenerator
+	cowns []*Cown
+}
+
+
+func (g *veronaGenerator) Run() {
+	for {
+		req := g.Creator.NewRequest(g.ServiceTime.getRand())
+		// Assume random cown selection for starters
+		cownIdx := rand.Intn(len(g.cowns))
+		g.cowns[cownIdx].queue.PushBack(req)
+		if !g.cowns[cownIdx].isSchedulled {
+			qIdx := rand.Intn(g.GetOutQueueCount())
+			g.WriteOutQueueI(g.cowns[cownIdx], qIdx)
+		}
 		g.Wait(g.WaitTime.getRand())
 	}
 }

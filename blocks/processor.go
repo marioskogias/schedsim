@@ -266,6 +266,61 @@ func (p *VeronaProcessor) Run() {
 	}
 }
 
+type VeronaProcessor2 struct {
+	genericProcessor
+	bCount   int
+	nextSteal int
+}
+
+func NewVeronaProcessor(q float64) *VeronaProcessor {
+	return &VeronaProcessor{quantum: q}
+}
+
+func (p *VeronaProcessor) Run() {
+	var r engine.ReqInterface
+	var gotReq bool
+
+	for {
+		if p.nextSteal == 0 {
+			// Avoid queue 0 which is the local queue
+			base := rand.Intn(p.GetInQueueCount())
+			for i := 0; i < p.GetInQueueCount(); i += 1 {
+				idx := (base + i) % p.GetInQueueCount()
+				if idx == 0 {
+					continue
+				}
+				l := p.GetInQueueLen(i)
+				if l > 0 {
+					r = p.ReadInQueueI(i)
+					gotReq = true
+					break
+				}
+			}
+			p.nextSteal = int(math.Max(1.0, float64(p.GetInQueueLen(0))))
+		}
+		if !gotReq {
+			localCount := p.GetInQueueLen(0)
+			if localCount > 0 {
+				r = p.ReadInQueueI(0)
+			} else {
+				r, _ = p.ReadInQueuesRandLocalPr()
+			}
+		}
+
+		gotReq = false
+		// Serve the request
+		if r.GetServiceTime() <= p.quantum {
+			p.Wait(r.GetServiceTime())
+			p.reqDrain.TerminateReq(r)
+		} else {
+			p.Wait(p.quantum)
+			r.SubServiceTime(p.quantum)
+			p.WriteInQueue(r)
+		}
+		p.nextSteal -= 1
+	}
+}
+
 // SRPT Processor keeping requests in a heap
 
 type ReqHeap []engine.ReqInterface
