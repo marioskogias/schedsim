@@ -17,6 +17,9 @@ func main() {
 	var duration = flag.Float64("duration", 1000000, "experiment duration")
 	var bufferSize = flag.Int("buffersize", 1, "size of the bounded buffer")
 	var quantum = flag.Float64("quantum", 1.0, "quantum for TS processors")
+	var bCount = flag.Int("bCount", 1, "behaviour count per execution")
+	var cownCount = flag.Int("cownCount", 1, "total number of cowns")
+	var sel = flag.Int("sel", 0, "cown selector: 0 for rand 1 for zipf")
 
 	flag.Parse()
 
@@ -44,6 +47,8 @@ func main() {
 			topologies.BoundedQueue(l, *mu, *duration, *bufferSize)
 		} else if *topo == 3 {
 			topologies.Verona(l, *mu, *duration, *genType, *quantum)
+		} else if *topo == 4 {
+			topologies.VeronaCown(l, *mu, *duration, *genType, *cownCount, *bCount, *sel)
 		} else {
 			panic("Unknown topology")
 		}

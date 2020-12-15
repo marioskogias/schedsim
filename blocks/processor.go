@@ -268,15 +268,15 @@ func (p *VeronaProcessor) Run() {
 
 type VeronaProcessor2 struct {
 	genericProcessor
-	bCount   int
+	bCount    int
 	nextSteal int
 }
 
-func NewVeronaProcessor(q float64) *VeronaProcessor {
-	return &VeronaProcessor{quantum: q}
+func NewVeronaProcessor2(bCount int) *VeronaProcessor2 {
+	return &VeronaProcessor2{bCount: bCount}
 }
 
-func (p *VeronaProcessor) Run() {
+func (p *VeronaProcessor2) Run() {
 	var r engine.ReqInterface
 	var gotReq bool
 
@@ -308,14 +308,21 @@ func (p *VeronaProcessor) Run() {
 		}
 
 		gotReq = false
-		// Serve the request
-		if r.GetServiceTime() <= p.quantum {
-			p.Wait(r.GetServiceTime())
-			p.reqDrain.TerminateReq(r)
-		} else {
-			p.Wait(p.quantum)
-			r.SubServiceTime(p.quantum)
-			p.WriteInQueue(r)
+
+		c := r.(*Cown)
+		for i := 0; i < p.bCount; i++ {
+			if c.queue.Len() == 0 {
+				c.isSchedulled = false
+				break
+			}
+			// Serve requests
+			el := c.queue.Remove(c.queue.Front())
+			req := el.(engine.ReqInterface)
+			p.Wait(req.GetServiceTime())
+			p.reqDrain.TerminateReq(req)
+		}
+		if c.isSchedulled {
+			p.WriteInQueue(c)
 		}
 		p.nextSteal -= 1
 	}
