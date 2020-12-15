@@ -270,10 +270,11 @@ type VeronaProcessor2 struct {
 	genericProcessor
 	bCount    int
 	nextSteal int
+	fair      bool
 }
 
-func NewVeronaProcessor2(bCount int) *VeronaProcessor2 {
-	return &VeronaProcessor2{bCount: bCount}
+func NewVeronaProcessor2(bCount int, fair bool) *VeronaProcessor2 {
+	return &VeronaProcessor2{bCount: bCount, fair: fair}
 }
 
 func (p *VeronaProcessor2) Run() {
@@ -324,7 +325,11 @@ func (p *VeronaProcessor2) Run() {
 		if c.isSchedulled {
 			p.WriteInQueue(c)
 		}
-		p.nextSteal -= 1
+		if p.fair == true {
+			p.nextSteal -= 1
+		} else {
+			p.nextSteal = 100 // avoid stealing
+		}
 	}
 }
 

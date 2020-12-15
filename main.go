@@ -20,6 +20,7 @@ func main() {
 	var bCount = flag.Int("bCount", 1, "behaviour count per execution")
 	var cownCount = flag.Int("cownCount", 1, "total number of cowns")
 	var sel = flag.Int("sel", 0, "cown selector: 0 for rand 1 for zipf")
+	var fair = flag.Bool("fair", true, "fairness")
 
 	flag.Parse()
 
@@ -48,7 +49,7 @@ func main() {
 		} else if *topo == 3 {
 			topologies.Verona(l, *mu, *duration, *genType, *quantum)
 		} else if *topo == 4 {
-			topologies.VeronaCown(l, *mu, *duration, *genType, *cownCount, *bCount, *sel)
+			topologies.VeronaCown(l, *mu, *duration, *genType, *cownCount, *bCount, *sel, *fair)
 		} else {
 			panic("Unknown topology")
 		}
