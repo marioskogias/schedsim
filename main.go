@@ -20,7 +20,7 @@ func main() {
 	var bCount = flag.Int("bCount", 1, "behaviour count per execution")
 	var cownCount = flag.Int("cownCount", 1, "total number of cowns")
 	var sel = flag.Int("sel", 0, "cown selector: 0 for rand 1 for zipf")
-	var fair = flag.Bool("fair", true, "fairness")
+	var fair = flag.Bool("fair", false, "fairness")
 
 	flag.Parse()
 
