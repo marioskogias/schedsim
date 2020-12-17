@@ -234,9 +234,9 @@ func (p *VeronaProcessor) Run() {
 				if idx == 0 {
 					continue
 				}
-				l := p.GetInQueueLen(i)
+				l := p.GetInQueueLen(idx)
 				if l > 0 {
-					r = p.ReadInQueueI(i)
+					r = p.ReadInQueueI(idx)
 					gotReq = true
 					break
 				}
@@ -263,6 +263,7 @@ func (p *VeronaProcessor) Run() {
 			p.WriteInQueue(r)
 		}
 		p.nextSteal -= 1
+		//p.nextSteal = 100
 	}
 }
 
@@ -290,9 +291,9 @@ func (p *VeronaProcessor2) Run() {
 				if idx == 0 {
 					continue
 				}
-				l := p.GetInQueueLen(i)
+				l := p.GetInQueueLen(idx)
 				if l > 0 {
-					r = p.ReadInQueueI(i)
+					r = p.ReadInQueueI(idx)
 					gotReq = true
 					break
 				}
